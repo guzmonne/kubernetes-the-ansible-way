@@ -21,3 +21,8 @@ inventory:
 	cd ansible;\
 	ansible-inventory --list;\
 	cd ..;
+
+bastion:
+	cd ansible;\
+	ansible-playbook bastion.yaml;\
+	cd ..;

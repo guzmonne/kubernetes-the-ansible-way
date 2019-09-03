@@ -50,3 +50,20 @@ sudo mv cfssl_linux-amd64 /usr/local/bin/cfssl
 sudo mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
 ```
 
+## Provisioning a CA and Generating TLS Certificates
+
+We need to generate:
+
+- Certificate Authority
+  - `ca-config.json`
+  - `ca-csr.json`
+  - `ca-key.pem`
+  - `ca.pem`
+- Client and Server Certificates
+  - `admin-csr.json`
+  - `admin-key.pem`
+  - `admin.pem`
+- The Kubelet Client Certificates
+  - `{{ instance }}-csr.json`
+  - `worker-{{ instance }}-key.pem`
+  - `worker-{{ instance }}.pem`

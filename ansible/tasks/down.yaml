@@ -31,10 +31,18 @@
     state: absent
     path: './output/auto_scaling_group.yaml'
 
+- name: Delete the EC2 Key
+  ec2_key:
+    name: '{{ key_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    region: '{{ aws_region }}'
+    state: absent
+
 - name: Delete the private key
   file:
     state: absent
-    path: './output/ec2_key.pem'
+    path: './output/{{ key_name }}.pem'
   when: state == "absent"
 
 - name: Delete Cloudformation Instances Output

@@ -1,6 +1,3 @@
-- set_fact:
-    key_name: '{{ key_name | default(project_name) }}'
-
 - name: Create Network Cloudformation Stack
   cloudformation:
     stack_name: "{{ project_name }}-networking"
@@ -29,14 +26,14 @@
     aws_secret_key: '{{ aws_secret_key }}'
     region: '{{ aws_region }}'
     state: present
-  register: result
+  register: ec2_key
 
 - name: Save EC2 key
   copy:
-    content: '{{ result.key.private_key }}'
-    dest: './output/ec2_key.pem'
+    content: '{{ ec2_key.key.private_key }}'
+    dest: './output/{{ key_name }}.pem'
     mode: '0400'
-  when: result.key.private_key is defined
+  when: ec2_key.key.private_key is defined
 
 - name: Create the Bastion Instance
   cloudformation:
@@ -50,7 +47,7 @@
     template_parameters:
       InstanceName: '{{ bastion_name | default(project_name + "-bastion") }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
-      KeyName: '{{ key_name | default() }}'
+      KeyName: '{{ key_name }}'
       InstanceType: '{{ bastion_instance_type | default("t3.small") }}'
       ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
       SubnetId: '{{ networking.stack_outputs.PublicSubnet3 }}'
@@ -73,8 +70,9 @@
     template_parameters:
       ProjectName: '{{ project_name }}'
       AutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-auto-scaling-group") }}'
+      LaunchTemplateName: '{{ launch_configuration_name | default(project_name + "-launch_template") }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
-      KeyName: '{{ key_name | default() }}'
+      KeyName: '{{ key_name }}'
       InstanceType: '{{ instance_type | default("m5.large") }}'
       ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
       VolumeSize: '{{ volume_size | default(100) }}'

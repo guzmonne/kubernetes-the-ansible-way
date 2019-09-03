@@ -1,12 +1,14 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Levanta un bastión en EC2 para acceder a recursos del CLI'
 Parameters:
   ProjectName:
     Description: Name of the project
     Type: String
   AutoScalingGroupName:
     Description: Name of the AutoScalingGroup
+    Type: String
+  LaunchTemplateName:
+    Description: Name of the LaunchTemplate
     Type: String
   SecurityGroup:
     Description: Security Group ID
@@ -48,32 +50,44 @@ Parameters:
     Type: String
     Description: Subnet C Id
 Resources:
-  LaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      AssociatePublicIpAddress: 'true'
-      ImageId: !Ref ImageId
-      InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyName
-      SecurityGroups:
-        - !Ref SecurityGroup
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvda
-          Ebs:
-            VolumeSize: !Ref VolumeSize
-            VolumeType: gp2
-            DeleteOnTermination: true
+      LaunchTemplateName: !Ref LaunchTemplateName
+      LaunchTemplateData:
+        ImageId: !Ref ImageId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref SecurityGroup
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       DesiredCapacity: !Ref DesiredCapacity
-      LaunchConfigurationName: !Ref LaunchConfiguration
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
       VPCZoneIdentifier:
         - !Ref SubnetIdA
         - !Ref SubnetIdB
         - !Ref SubnetIdC
+      MixedInstancesPolicy:
+        LaunchTemplate:
+          LaunchTemplateSpecification: 
+            LaunchTemplateId: !Ref LaunchTemplate
+            Version: 1
+          Overrides:
+            - InstanceType: m5.large
+            - InstanceType: m4.large
+            - InstanceType: m3.large
+            - InstanceType: t3.xlarge
+            - InstanceType: t2.xlarge
+            - InstanceType: t3.2xlarge
+            - InstanceType: t2.2xlarge
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: lowest-price
+          SpotInstancePools: 4
       Tags:
         - Key: Name
           Value: !Ref AutoScalingGroupName
@@ -82,13 +96,13 @@ Resources:
           Value: !Ref ProjectName
           PropagateAtLaunch: 'true'
         - Key: Worker
-          Value: 1
+          Value: true
           PropagateAtLaunch: 'true'
         - Key: Master
-          Value: 1
+          Value: true
           PropagateAtLaunch: 'true'
         - Key: Infra
-          Value: 1
+          Value: true
           PropagateAtLaunch: 'true'
     UpdatePolicy:
       AutoScalingRollingUpdate:

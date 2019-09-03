@@ -1,0 +1,58 @@
+---
+- name: Bastion Configuration
+  hosts: tag_Bastion_1
+  gather_facts: no
+  vars:
+    ansible_ssh_private_key_file: ./output/kube.pem
+    ansible_ssh_user: ubuntu
+    ansible_python_interpreter: /usr/bin/python3
+  vars_files:
+    - secret.yml
+  tasks:
+    - name: Copy ca-config.json
+      template:
+        src: ./templates/ca-config.json
+        dest: '/home/{{ ansible_ssh_user }}/ca-config.json'
+        mode: '0644'
+    - name: Copy ca-csr.json
+      template:
+        src: ./templates/ca-csr.json
+        dest: '/home/{{ ansible_ssh_user }}/ca-csr.json'
+        mode: '0644'
+    - name: Check that the ca-key exists
+      stat:
+        path: '/home/{{ ansible_ssh_user }}/ca-key.pem'
+      register: ca-key
+    - name: Check that the ca-key.pem exists
+      stat:
+        path: '/home/{{ ansible_ssh_user }}/ca-key.pem'
+      register: ca_key
+    - name: Check that the ca.pem exists
+      stat:
+        path: '/home/{{ ansible_ssh_user }}/ca.pem'
+      register: ca
+    - name: Generate the CA configuration file, certificate, and private key
+      shell: "cfssl gencert -initca ca-csr.json | cfssljson -bare ca"
+      when: ca_key.stat.exists == False and ca.stat.exists == False
+    - name: Copy admin-csr.json
+      template:
+        src: ./templates/admin-csr.json
+        dest: '/home/{{ ansible_ssh_user }}/admin-csr.json'
+        mode: '0644'
+    - name: Check that the admin-key.pem exists
+      stat:
+        path: '/home/{{ ansible_ssh_user }}/admin-key.pem'
+      register: admin_key
+    - name: Check that the admin.pem exists
+      stat:
+        path: '/home/{{ ansible_ssh_user }}/admin.pem'
+      register: admin
+    - name: Generate the admin client certificate and private key
+      shell: >
+        cfssl gencert \
+          -ca=ca.pem \
+          -ca-key=ca-key.pem \
+          -config=ca-config.json \
+          -profile=kubernetes \
+          admin-csr.json | cfssljson -bare admin
+      when: admin_key.stat.exists == False and admin.stat.exists == False

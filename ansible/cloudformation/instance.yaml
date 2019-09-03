@@ -1,6 +1,5 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Levanta un bastión en EC2 para acceder a recursos del CLI'
 Parameters:
   InstanceName:
     Description: Name of the instance
@@ -42,12 +41,12 @@ Resources:
         - Key: Project
           Value: cri
         - Key: Bastion
-          Value: 1
+          Value: true
       UserData:
         Fn::Base64:
           !Sub |
             #!/bin/bash
-            wget -s --https-only --timestamping \
+            wget \
               https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 \
               https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
             chmod +x cfssl_linux-amd64 cfssljson_linux-amd64

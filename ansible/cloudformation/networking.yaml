@@ -1,6 +1,5 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Levanta la infraestructura para instalar un clúster de Kubernetes'
 Parameters:
   KubernetesClusterName:
     Description: Nombre del cluster de Kubernetes
