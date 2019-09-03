@@ -1,0 +1,92 @@
+- set_fact:
+    key_name: '{{ key_name | default(project_name) }}'
+
+- name: Create Network Cloudformation Stack
+  cloudformation:
+    stack_name: "{{ project_name }}-networking"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: present
+    region: "{{ aws_region }}"
+    template: './cloudformation/networking.yaml'
+    disable_rollback: true
+    template_parameters:
+      KubernetesClusterName: '{{ project_name }}'
+    tags:
+      Name: "{{ project_name }}_bastion"
+      Project: "{{ project_name }}"
+  register: networking
+
+- name: Save Cloudformation Networking Output
+  copy:
+    content: "{{ networking | to_nice_yaml }}"
+    dest: "./output/networking.yaml"
+
+- name: Create the EC2 Key
+  ec2_key:
+    name: '{{ key_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    region: '{{ aws_region }}'
+    state: present
+  register: result
+
+- name: Save EC2 key
+  copy:
+    content: '{{ result.key.private_key }}'
+    dest: './output/ec2_key.pem'
+    mode: '0400'
+  when: result.key.private_key is defined
+
+- name: Create the Bastion Instance
+  cloudformation:
+    stack_name: '{{ project_name }}-bastion-instance'
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: present
+    region: "{{ aws_region }}"
+    template: './cloudformation/instance.yaml'
+    disable_rollback: true
+    template_parameters:
+      InstanceName: '{{ bastion_name | default(project_name + "-bastion") }}'
+      SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
+      KeyName: '{{ key_name | default() }}'
+      InstanceType: '{{ bastion_instance_type | default("t3.small") }}'
+      ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
+      SubnetId: '{{ networking.stack_outputs.PublicSubnet3 }}'
+  register: instance
+
+- name: Save Cloudformation Instance Output
+  copy:
+    content: "{{ instance | to_nice_yaml }}"
+    dest: "./output/instance.yaml"
+
+- name: Create Cloudformation Instances Stacks
+  cloudformation:
+    stack_name: "{{ project_name }}-auto-scaling-group"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: present
+    region: "{{ aws_region }}"
+    template: './cloudformation/auto_scaling_group.yaml'
+    disable_rollback: true
+    template_parameters:
+      ProjectName: '{{ project_name }}'
+      AutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-auto-scaling-group") }}'
+      SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
+      KeyName: '{{ key_name | default() }}'
+      InstanceType: '{{ instance_type | default("m5.large") }}'
+      ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
+      VolumeSize: '{{ volume_size | default(100) }}'
+      DesiredCapacity: '{{ desired_capacity | default(3) }}'
+      MaxSize: '{{ min_size | default(8) }}'
+      MinSize: '{{ max_size | default(1) }}'
+      SubnetIdA: '{{ networking.stack_outputs.PrivateSubnet0 }}'
+      SubnetIdB: '{{ networking.stack_outputs.PrivateSubnet1 }}'
+      SubnetIdC: '{{ networking.stack_outputs.PrivateSubnet2 }}'
+  register: auto_scaling_group
+
+- name: Save Cloudformation Auto Scaling Group Output
+  copy:
+    content: "{{ auto_scaling_group | to_nice_yaml }}"
+    dest: "./output/auto_scaling_group.yaml"

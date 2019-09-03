@@ -1,0 +1,97 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Levanta un bastión en EC2 para acceder a recursos del CLI'
+Parameters:
+  ProjectName:
+    Description: Name of the project
+    Type: String
+  AutoScalingGroupName:
+    Description: Name of the AutoScalingGroup
+    Type: String
+  SecurityGroup:
+    Description: Security Group ID
+    Type: String
+  KeyName:
+    Description: SSH Key
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Description: EC2 Instance type
+    Type: String
+    Default: m5.large
+  ImageId:
+    Description: Instance ImageId
+    Type: String
+    Default: ami-064a0193585662d74
+  VolumeSize:
+    Type: Number
+    Description: Node volume size.
+    Default: 20
+  DesiredCapacity:
+    Type: Number
+    Description: Cluster desired capacity
+    Default: 3
+  MaxSize:
+    Type: Number
+    Description: Cluster max capacity
+    Default: 8
+  MinSize:
+    Type: Number
+    Description: Cluster min capacity
+    Default: 1
+  SubnetIdA:
+    Type: String
+    Description: Subnet A Id
+  SubnetIdB:
+    Type: String
+    Description: Subnet B Id
+  SubnetIdC:
+    Type: String
+    Description: Subnet C Id
+Resources:
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: 'true'
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - !Ref SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp2
+            DeleteOnTermination: true
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref DesiredCapacity
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      VPCZoneIdentifier:
+        - !Ref SubnetIdA
+        - !Ref SubnetIdB
+        - !Ref SubnetIdC
+      Tags:
+        - Key: Name
+          Value: !Ref AutoScalingGroupName
+          PropagateAtLaunch: 'true'
+        - Key: Project
+          Value: !Ref ProjectName
+          PropagateAtLaunch: 'true'
+        - Key: Worker
+          Value: 1
+          PropagateAtLaunch: 'true'
+        - Key: Master
+          Value: 1
+          PropagateAtLaunch: 'true'
+        - Key: Infra
+          Value: 1
+          PropagateAtLaunch: 'true'
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: '1'
+        MinInstancesInService: !Ref DesiredCapacity
+        PauseTime: 'PT5M'

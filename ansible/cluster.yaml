@@ -1,0 +1,16 @@
+---
+- name: Create/Delete Kubernetes Cluster
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./secret.yml
+  tasks:
+    - include_tasks: './tasks/up.yaml'
+      when: state == 'present'
+    
+    - include_tasks: './tasks/down.yaml'
+      when: state != 'present'
+
+
+
