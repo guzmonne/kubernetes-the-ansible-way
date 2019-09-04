@@ -1,0 +1,26 @@
+- name: Copy the instances json certificate request
+  template:
+    src: ./templates/client-csr.json
+    dest: '/home/{{ ansible_ssh_user }}/{{ item.instance_id }}-csr.json'
+    mode: '0644'
+
+- name: Check that the {{ item.instance_id }}-key.pem exists
+  stat:
+    path: '/home/{{ ansible_ssh_user }}/{{ item.instance_id }}-key.pem'
+  register: client_key
+
+- name: Check that the worker.pem exists
+  stat:
+    path: '/home/{{ ansible_ssh_user }}/{{ item.instance_id }}.pem'
+  register: client
+
+- name: Generate the admin client certificate and private key
+  shell: >
+    cfssl gencert \
+      -ca=ca.pem \
+      -ca-key=ca-key.pem \
+      -config=ca-config.json \
+      -hostname={{ item.instance_id }},{{ item.network_interfaces[0].private_ip_address }} \
+      -profile=kubernetes \
+      {{ item.instance_id }}-csr.json | cfssljson -bare {{ item.instance_id }}
+  when: client_key.stat.exists == False and client.stat.exists == False

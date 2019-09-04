@@ -64,6 +64,22 @@ We need to generate:
   - `admin-key.pem`
   - `admin.pem`
 - The Kubelet Client Certificates
-  - `{{ instance }}-csr.json`
-  - `worker-{{ instance }}-key.pem`
-  - `worker-{{ instance }}.pem`
+  - `{{ instance_id }}-csr.json`
+  - `{{ instance_id }}-key.pem`
+  - `{{ instance_id }}.pem`
+- The Controller Manager Client Certificate
+  - `kube-controller-manager-csr.json`
+  - `kube-controller-manager-key.pem`
+  - `kube-controller-manager.pem`
+- The Kube Proxy Client Certificate
+  - `kube-proxy-csr.json`
+  - `kube-proxy-key.pem`
+  - `kube-proxy.pem`
+- The Scheduler Client Certificate
+  - `kube-scheduler-csr.json`
+  - `kube-scheduler-key.pem`
+  - `kube-scheduler.pem`
+- The Kubernetes API Server Certificate
+  - `kubernetes-csr.json`
+  - `kubernetes-key.pem`
+  - `kubernetes.pem`

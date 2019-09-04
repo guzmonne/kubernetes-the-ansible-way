@@ -1,5 +1,5 @@
 {
-  "CN": "admin",
+  "CN": "system:node:{{ item.instance_id }}",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -8,7 +8,7 @@
     {
       "C": "{{ C }}",
       "L": "{{ L }}",
-      "O": "system:masters",
+      "O": "system:nodes",
       "OU": "{{ project_name }}",
       "ST": "{{ ST }}"
     }

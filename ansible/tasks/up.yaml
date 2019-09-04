@@ -58,7 +58,7 @@
     content: "{{ instance | to_nice_yaml }}"
     dest: "./output/instance.yaml"
 
-- name: Create Cloudformation Instances Stacks
+- name: Create Cloudformation Auto Scaling Groups Stacks
   cloudformation:
     stack_name: "{{ project_name }}-auto-scaling-group"
     aws_access_key: "{{ aws_access_key }}"
@@ -69,14 +69,16 @@
     disable_rollback: true
     template_parameters:
       ProjectName: '{{ project_name }}'
-      AutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-auto-scaling-group") }}'
+      MasterAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "master-asg") }}'
+      WorkerAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "worker-asg") }}'
       LaunchTemplateName: '{{ launch_configuration_name | default(project_name + "-launch_template") }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
       InstanceType: '{{ instance_type | default("m5.large") }}'
       ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
       VolumeSize: '{{ volume_size | default(100) }}'
-      DesiredCapacity: '{{ desired_capacity | default(3) }}'
+      MasterDesiredCapacity: '{{ desired_capacity | default(3) }}'
+      WorkerDesiredCapacity: '{{ desired_capacity | default(3) }}'
       MaxSize: '{{ min_size | default(8) }}'
       MinSize: '{{ max_size | default(1) }}'
       SubnetIdA: '{{ networking.stack_outputs.PrivateSubnet0 }}'

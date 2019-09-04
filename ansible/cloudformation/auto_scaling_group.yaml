@@ -4,7 +4,10 @@ Parameters:
   ProjectName:
     Description: Name of the project
     Type: String
-  AutoScalingGroupName:
+  MasterAutoScalingGroupName:
+    Description: Name of the AutoScalingGroup
+    Type: String
+  WorkerAutoScalingGroupName:
     Description: Name of the AutoScalingGroup
     Type: String
   LaunchTemplateName:
@@ -28,9 +31,13 @@ Parameters:
     Type: Number
     Description: Node volume size.
     Default: 20
-  DesiredCapacity:
+  MasterDesiredCapacity:
     Type: Number
-    Description: Cluster desired capacity
+    Description: Master nodes desired capacity
+    Default: 3
+  WorkerDesiredCapacity:
+    Type: Number
+    Description: Worker nodes desired capacity
     Default: 3
   MaxSize:
     Type: Number
@@ -60,7 +67,7 @@ Resources:
         KeyName: !Ref KeyName
         SecurityGroupIds:
           - !Ref SecurityGroup
-  AutoScalingGroup:
+  MasterAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       DesiredCapacity: !Ref DesiredCapacity
@@ -90,19 +97,56 @@ Resources:
           SpotInstancePools: 4
       Tags:
         - Key: Name
-          Value: !Ref AutoScalingGroupName
+          Value: !Ref MasterAutoScalingGroupName
           PropagateAtLaunch: 'true'
         - Key: Project
           Value: !Ref ProjectName
           PropagateAtLaunch: 'true'
-        - Key: Worker
-          Value: true
+        - Key: type
+          Value: master
           PropagateAtLaunch: 'true'
-        - Key: Master
-          Value: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: '1'
+        MinInstancesInService: !Ref DesiredCapacity
+        PauseTime: 'PT5M'
+  WorkerAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref DesiredCapacity
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      VPCZoneIdentifier:
+        - !Ref SubnetIdA
+        - !Ref SubnetIdB
+        - !Ref SubnetIdC
+      MixedInstancesPolicy:
+        LaunchTemplate:
+          LaunchTemplateSpecification: 
+            LaunchTemplateId: !Ref LaunchTemplate
+            Version: 1
+          Overrides:
+            - InstanceType: m5.large
+            - InstanceType: m4.large
+            - InstanceType: m3.large
+            - InstanceType: t3.xlarge
+            - InstanceType: t2.xlarge
+            - InstanceType: t3.2xlarge
+            - InstanceType: t2.2xlarge
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: lowest-price
+          SpotInstancePools: 4
+      Tags:
+        - Key: Name
+          Value: !Ref WorkerAutoScalingGroupName
           PropagateAtLaunch: 'true'
-        - Key: Infra
-          Value: true
+        - Key: Project
+          Value: !Ref ProjectName
+          PropagateAtLaunch: 'true'
+        - Key: type
+          Value: worker
           PropagateAtLaunch: 'true'
     UpdatePolicy:
       AutoScalingRollingUpdate:
