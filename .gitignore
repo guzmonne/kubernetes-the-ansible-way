@@ -1,3 +1,5 @@
 ansible/password
 ansible/secret.yml
 ansible/output
+ansible/tls
+ansible/kubeconfigs

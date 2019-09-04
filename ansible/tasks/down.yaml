@@ -65,3 +65,13 @@
   file:
     state: absent
     path: "./output/networking.yaml"
+
+- name: Delete the tls folder
+  file:
+    state: absent
+    path: './tls/'
+
+- name: Create an empty tls folder
+  file:
+    state: directory
+    path: './tls/'

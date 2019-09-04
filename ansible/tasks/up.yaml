@@ -69,9 +69,9 @@
     disable_rollback: true
     template_parameters:
       ProjectName: '{{ project_name }}'
-      MasterAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "master-asg") }}'
-      WorkerAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "worker-asg") }}'
-      LaunchTemplateName: '{{ launch_configuration_name | default(project_name + "-launch_template") }}'
+      MasterAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-master-asg") }}'
+      WorkerAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-worker-asg") }}'
+      LaunchTemplateName: '{{ launch_configuration_name | default(project_name + "-lt") }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
       InstanceType: '{{ instance_type | default("m5.large") }}'
@@ -81,9 +81,14 @@
       WorkerDesiredCapacity: '{{ desired_capacity | default(3) }}'
       MaxSize: '{{ min_size | default(8) }}'
       MinSize: '{{ max_size | default(1) }}'
-      SubnetIdA: '{{ networking.stack_outputs.PrivateSubnet0 }}'
-      SubnetIdB: '{{ networking.stack_outputs.PrivateSubnet1 }}'
-      SubnetIdC: '{{ networking.stack_outputs.PrivateSubnet2 }}'
+      PrivateSubnetIdA: '{{ networking.stack_outputs.PrivateSubnet0 }}'
+      PrivateSubnetIdB: '{{ networking.stack_outputs.PrivateSubnet1 }}'
+      PrivateSubnetIdC: '{{ networking.stack_outputs.PrivateSubnet2 }}'
+      PublicSubnetIdA: '{{ networking.stack_outputs.PublicSubnet3 }}'
+      PublicSubnetIdB: '{{ networking.stack_outputs.PublicSubnet4 }}'
+      PublicSubnetIdC: '{{ networking.stack_outputs.PublicSubnet5 }}'
+      NetworkLoadBalancerName: '{{ network_load_balancer_name | default(project_name + "-nlb") }}'
+      VpcId: '{{ networking.stack_outputs.VpcId }}'
   register: auto_scaling_group
 
 - name: Save Cloudformation Auto Scaling Group Output

@@ -34,7 +34,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: us-east-1c
+      AvailabilityZone: us-east-1a
       CidrBlock: 10.240.0.0/24
       MapPublicIpOnLaunch: false
       Tags:
@@ -46,7 +46,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: us-east-1a
+      AvailabilityZone: us-east-1b
       CidrBlock: 10.240.1.0/24
       MapPublicIpOnLaunch: false
       Tags:
@@ -200,6 +200,9 @@ Resources:
         - Key: Name
           Value: kubernetes-fundamentals-instances-security-group
 Outputs:
+  VpcId:
+    Description: VPC Id
+    Value: !Ref VPC
   SecurityGroupId:
     Description: InstanceId
     Value: !Ref KubernetesSecurityGroup

@@ -22,7 +22,12 @@ inventory:
 	ansible-inventory --list;\
 	cd ..;
 
-bastion:
+tls:
 	cd ansible;\
-	ansible-playbook bastion.yaml;\
+	ansible-playbook tls.yaml;\
+	cd ..;
+
+kubeconfigs:
+	cd ansible;\
+	ansible-playbook kubeconfigs.yaml;\
 	cd ..;

@@ -47,16 +47,32 @@ Parameters:
     Type: Number
     Description: Cluster min capacity
     Default: 1
-  SubnetIdA:
+  PrivateSubnetIdA:
     Type: String
-    Description: Subnet A Id
-  SubnetIdB:
+    Description: Private Subnet A Id
+  PrivateSubnetIdB:
     Type: String
-    Description: Subnet B Id
-  SubnetIdC:
+    Description: Private Subnet B Id
+  PrivateSubnetIdC:
     Type: String
-    Description: Subnet C Id
+    Description: Private Subnet C Id
+  PublicSubnetIdA:
+    Type: String
+    Description: Public Subnet A Id
+  PublicSubnetIdB:
+    Type: String
+    Description: Public Subnet B Id
+  PublicSubnetIdC:
+    Type: String
+    Description: Public Subnet C Id
+  NetworkLoadBalancerName:
+    Type: String
+    Description: Network Load Balancer Name
+  VpcId:
+    Type: String
+    Description: VPC ID
 Resources:
+  
   LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -67,59 +83,17 @@ Resources:
         KeyName: !Ref KeyName
         SecurityGroupIds:
           - !Ref SecurityGroup
-  MasterAutoScalingGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      DesiredCapacity: !Ref DesiredCapacity
-      MinSize: !Ref MinSize
-      MaxSize: !Ref MaxSize
-      VPCZoneIdentifier:
-        - !Ref SubnetIdA
-        - !Ref SubnetIdB
-        - !Ref SubnetIdC
-      MixedInstancesPolicy:
-        LaunchTemplate:
-          LaunchTemplateSpecification: 
-            LaunchTemplateId: !Ref LaunchTemplate
-            Version: 1
-          Overrides:
-            - InstanceType: m5.large
-            - InstanceType: m4.large
-            - InstanceType: m3.large
-            - InstanceType: t3.xlarge
-            - InstanceType: t2.xlarge
-            - InstanceType: t3.2xlarge
-            - InstanceType: t2.2xlarge
-        InstancesDistribution:
-          OnDemandBaseCapacity: 0
-          OnDemandPercentageAboveBaseCapacity: 0
-          SpotAllocationStrategy: lowest-price
-          SpotInstancePools: 4
-      Tags:
-        - Key: Name
-          Value: !Ref MasterAutoScalingGroupName
-          PropagateAtLaunch: 'true'
-        - Key: Project
-          Value: !Ref ProjectName
-          PropagateAtLaunch: 'true'
-        - Key: type
-          Value: master
-          PropagateAtLaunch: 'true'
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MaxBatchSize: '1'
-        MinInstancesInService: !Ref DesiredCapacity
-        PauseTime: 'PT5M'
+  
   WorkerAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      DesiredCapacity: !Ref DesiredCapacity
+      DesiredCapacity: !Ref WorkerDesiredCapacity
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
       VPCZoneIdentifier:
-        - !Ref SubnetIdA
-        - !Ref SubnetIdB
-        - !Ref SubnetIdC
+        - !Ref PrivateSubnetIdA
+        - !Ref PrivateSubnetIdB
+        - !Ref PrivateSubnetIdC
       MixedInstancesPolicy:
         LaunchTemplate:
           LaunchTemplateSpecification: 
@@ -145,11 +119,87 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
           PropagateAtLaunch: 'true'
-        - Key: type
+        - Key: Type
           Value: worker
           PropagateAtLaunch: 'true'
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MaxBatchSize: '1'
-        MinInstancesInService: !Ref DesiredCapacity
-        PauseTime: 'PT5M'
+
+  MasterAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref MasterDesiredCapacity
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      TargetGroupARNs:
+        - !Ref TargetGroup6443
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnetIdA
+        - !Ref PrivateSubnetIdB
+        - !Ref PrivateSubnetIdC
+      MixedInstancesPolicy:
+        LaunchTemplate:
+          LaunchTemplateSpecification: 
+            LaunchTemplateId: !Ref LaunchTemplate
+            Version: 1
+          Overrides:
+            - InstanceType: t3.small
+            - InstanceType: t3.medium
+            - InstanceType: m5.large
+            - InstanceType: m4.large
+        InstancesDistribution:
+          OnDemandBaseCapacity: 0
+          OnDemandPercentageAboveBaseCapacity: 0
+          SpotAllocationStrategy: lowest-price
+          SpotInstancePools: 4
+      Tags:
+        - Key: Name
+          Value: !Ref MasterAutoScalingGroupName
+          PropagateAtLaunch: 'true'
+        - Key: Project
+          Value: !Ref ProjectName
+          PropagateAtLaunch: 'true'
+        - Key: Type
+          Value: master
+          PropagateAtLaunch: 'true'
+
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Name: !Ref NetworkLoadBalancerName
+      Scheme: internet-facing
+      Subnets:
+        - !Ref PublicSubnetIdA
+        - !Ref PublicSubnetIdB
+        - !Ref PublicSubnetIdC
+      Type: network
+      Tags:
+        - Key: Name
+          Value: !Ref NetworkLoadBalancerName
+        - Key: Project
+          Value: !Ref ProjectName
+
+  Listener6443:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup6443
+          Type: forward
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: 6443
+      Protocol: TCP
+  
+  TargetGroup6443:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckPort: 6443
+      HealthCheckProtocol: TCP
+      Name: TargetGroup6443
+      Port: 6443
+      Protocol: TCP
+      VpcId: !Ref VpcId
+      Tags:  
+        - Key: Name
+          Value: TargetGroup6443
+        - Key: Project
+          Value: !Ref ProjectName
