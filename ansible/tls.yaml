@@ -67,14 +67,6 @@
           "tag:Type": worker
           instance-state-name: ["running"]
       register: worker_nodes
-
-    - debug:
-        var: item.ami_launch_index
-      loop: '{{ worker_nodes.instances }}'
-
-    - debug:
-        var: item.private_ip_address
-      loop: '{{ worker_nodes.instances }}'
     
     - name: Create the client certificates
       include_tasks: ./tasks/client_csr.yaml
@@ -229,9 +221,6 @@
           "tag:Type": bastion
           instance-state-name: ["running"]
       register: bastion_nodes
-
-    - debug:
-        var: bastion_nodes
 
     - name: Get the IP address of the bastion
       set_fact:

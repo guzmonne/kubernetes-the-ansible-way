@@ -31,3 +31,8 @@ kubeconfigs:
 	cd ansible;\
 	ansible-playbook kubeconfigs.yaml;\
 	cd ..;
+
+encryption:
+	cd ansible;\
+	ansible-playbook encryption.yaml;\
+	cd ..;
