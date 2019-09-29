@@ -10,24 +10,23 @@ Restart=always
 RestartSec=5s
 LimitNOFILE=40000
 TimeoutStartSec=0
-ExecStart=/usr/local/bin/etcd \
-  --name {{ instance_id }} \
-  --cert-file=/etc/etcd/kubernetes.pem \
-  --key-file=/etc/etcd/kubernetes-key.pem \
-  --peer-cert-file=/etc/etcd/kubernetes.pem \
-  --peer-key-file=/etc/etcd/kubernetes-key.pem \
-  --trusted-ca-file=/etc/etcd/ca.pem \
-  --peer-trusted-ca-file=/etc/etcd/ca.pem \
-  --peer-client-cert-auth \
-  --client-cert-auth \
-  --initial-advertise-peer-urls https://{{ ansible_host }}:2380 \
-  --listen-peer-urls https://{{ ansible_host }}:2380 \
-  --listen-client-urls https://{{ ansible_host }}:2379,https://127.0.0.1:2379 \
+ExecStart=/usr/local/bin/etcd --name {{ instance_id }} \
+  --data-dir /var/lib/etcd \
+  --listen-client-urls https://{{ ansible_host }}:2379 \
   --advertise-client-urls https://{{ ansible_host }}:2379 \
-  --initial-cluster-token etcd-cluster-0 \
-  --initial-cluster {{ initial_cluster`` }} \
+  --listen-peer-urls https://{{ ansible_host }}:2380 \
+  --initial-advertise-peer-urls https://{{ ansible_host }}:2380 \
+  --initial-cluster {{ initial_cluster }} \
+  --initial-cluster-token etcd-cluster-token \
   --initial-cluster-state new \
-  --data-dir=/var/lib/etcd
+  --client-cert-auth \
+  --trusted-ca-file /etc/etcd/ca.pem \
+  --cert-file /etc/etcd/kubernetes.pem \
+  --key-file /etc/etcd/kubernetes-key.pem \
+  --peer-client-cert-auth \
+  --peer-trusted-ca-file /etc/etcd/ca.pem \
+  --peer-cert-file /etc/etcd/kubernetes.pem \
+  --peer-key-file /etc/etcd/kubernetes-key.pem
 
 [Install]
 WantedBy=multi-user.target

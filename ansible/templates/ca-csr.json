@@ -6,11 +6,11 @@
   },
   "names": [
     {
-      "C": "{{ C }}",
-      "L": "{{ L }}",
+      "C": "US",
+      "L": "Portland",
       "O": "Kubernetes",
       "OU": "CA",
-      "ST": "{{ ST }}"
+      "ST": "Oregon"
     }
   ]
 }

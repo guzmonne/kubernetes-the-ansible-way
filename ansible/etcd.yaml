@@ -32,9 +32,6 @@
         name: DUMMY
         initial_cluster: '{{ initial_cluster | join(",") }}'
 
-    - name: Install cfssl
-      
-
 - name: Create the etcd cluster
   hosts: masters
   gather_facts: no

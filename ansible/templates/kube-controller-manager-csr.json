@@ -6,11 +6,11 @@
   },
   "names": [
     {
-      "C": "{{ C }}",
-      "L": "{{ L }}",
+      "C": "US",
+      "L": "Portland",
       "O": "system:kube-controller-manager",
-      "OU": "{{ project_name }}",
-      "ST": "{{ ST }}"
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
     }
   ]
 }
