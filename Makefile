@@ -9,7 +9,7 @@ up:
 
 down:
 	cd ./ansible;\
-	ansible-playbook cluster.yaml --extra-vars "state=absent";\
+	ansible-playbook cluster.yaml --extra-vars "state=absent" --skip-tags up;\
 	cd ..;
 
 secret:
@@ -35,4 +35,9 @@ kubeconfigs:
 encryption:
 	cd ansible;\
 	ansible-playbook encryption.yaml;\
+	cd ..;
+
+etcd:
+	cd ansible;\
+	ansible-playbook etcd.yaml;\
 	cd ..;

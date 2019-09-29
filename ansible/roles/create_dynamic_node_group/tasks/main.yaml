@@ -3,11 +3,9 @@
     aws_access_key: '{{ aws_access_key }}'
     aws_secret_key: '{{ aws_secret_key }}'
     aws_region: '{{ aws_region }}'
-    filters: >
-      {
-        "tag:{{ type_tag_name }}": {{ bastion_type }},
-        instance-state-name: ["running"]
-      }
+    filters:
+      "tag:Type": '{{ bastion_type }}'
+      instance-state-name: ["running"]
   register: bastion_nodes
 
 - name: Get the IP address of the bastion
@@ -19,11 +17,9 @@
     aws_access_key: '{{ aws_access_key }}'
     aws_secret_key: '{{ aws_secret_key }}'
     aws_region: '{{ aws_region }}'
-    filters: >
-      {
-        "tag:{{ type_tag_name }}": {{ node_type }},
-        instance-state-name: ["running"]
-      }
+    filters:
+      "tag:Type": '{{ node_type }}'
+      instance-state-name: ["running"]
   register: nodes
 
 - name: 'Create the {{ group_name }} group'

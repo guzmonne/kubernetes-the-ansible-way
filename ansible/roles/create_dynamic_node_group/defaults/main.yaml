@@ -1,4 +1,3 @@
-type_tag_name: Type
 bastion_type: bastion
 node_type: master
 group_name: masters

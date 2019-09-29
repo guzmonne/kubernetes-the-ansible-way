@@ -5,6 +5,9 @@ Parameters:
     Description: Nombre del cluster de Kubernetes
     Type: String
     Default: kubernetes-fundamentals
+  PrivateHostedZoneName:
+    Description: Nombre de la hosted zone privada
+    Type: String
 Resources:
   VPC:
     Type: 'AWS::EC2::VPC'
@@ -17,6 +20,13 @@ Resources:
           Value: kubernetes-fundamentals
         - Key: Name
           Value: kubernetes-fundamentals-vpc
+  PrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties: 
+      Name: !Ref PrivateHostedZoneName
+      VPCs: 
+        - VPCId: !Ref VPC
+          VPCRegion: !Sub ${AWS::Region}
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:

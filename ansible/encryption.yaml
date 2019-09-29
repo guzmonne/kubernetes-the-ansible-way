@@ -1,4 +1,16 @@
 ---
+- name: Create the Master group
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  vars:
+    node_type: master
+    group_name: masters
+  roles:
+    - create_dynamic_node_group
+
 - name: Create the encryption file
   hosts: local
   connection: local
@@ -12,18 +24,6 @@
         mode: '0644'
       vars:
         secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters') }}"
-
-- name: Create the Master group
-  hosts: local
-  connection: local
-  gather_facts: no
-  vars_files:
-    - secret.yml
-  vars:
-    node_type: master
-    group_name: masters
-  roles:
-    - create_dynamic_instance_group
 
 - name: Copy the encryption file
   hosts: masters

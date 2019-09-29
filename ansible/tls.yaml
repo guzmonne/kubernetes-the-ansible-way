@@ -1,4 +1,28 @@
 ---
+- name: Create the Master group
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  vars:
+    node_type: master
+    group_name: masters
+  roles:
+    - create_dynamic_node_group
+
+- name: Create the Worker group
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  vars:
+    node_type: worker
+    group_name: workers
+  roles:
+    - create_dynamic_node_group
+
 - name: TLS Configuration
   hosts: local
   connection: local
@@ -57,20 +81,6 @@
           -profile=kubernetes \
           ./tls/admin-csr.json | cfssljson -bare ./tls/admin
       when: admin_key.stat.exists == False and admin.stat.exists == False
-    
-    - name: Get worker nodes
-      ec2_instance_facts:
-        aws_access_key: '{{ aws_access_key }}'
-        aws_secret_key: '{{ aws_secret_key }}'
-        aws_region: '{{ aws_region }}'
-        filters:
-          "tag:Type": worker
-          instance-state-name: ["running"]
-      register: worker_nodes
-    
-    - name: Create the client certificates
-      include_tasks: ./tasks/client_csr.yaml
-      loop: '{{ worker_nodes.instances }}'
 
     - name: Copy kube-controller-manager-csr.json
       template:
@@ -114,7 +124,7 @@
         path: './tls/kube-proxy.pem'
       register: kube_proxy
 
-    - name: Generate the Control Manager Client Certificate
+    - name: Generate the Kube Proxy Certificate
       shell: >
         cfssl gencert \
           -ca=./tls/ca.pem \
@@ -140,7 +150,7 @@
         path: './tls/kube-scheduler.pem'
       register: kube_scheduler
 
-    - name: Generate the Control Manager Client Certificate
+    - name: Generate the Kube Scheduler Certificate
       shell: >
         cfssl gencert \
           -ca=./tls/ca.pem \
@@ -166,13 +176,44 @@
         path: './tls/kubernetes.pem'
       register: kubernetes
 
-    - name: Generate the Control Manager Client Certificate
+    - name: Get master private IPs
+      set_fact:
+        private_ips: >
+          {{ ( private_ips | default([]) ) + [hostvars[item]["ansible_host"]] }}
+      loop: '{{ groups["masters"] }}'
+
+    - name: Define the list of subject alternative names for the Kubernetes API Server certificate
+      set_fact:
+        alternative_names: >
+          {{
+            [
+              "10.32.0.1",
+              "127.0.0.1",
+              "kubernetes",
+              "kubernetes.default",
+              "kubernetes.default.svc",
+              "kubernetes.default.svc.cluster",
+              "kubernetes.default.svc.cluster.local",
+              "kubernetes.svc.cluster.local",
+              "*.{{ public_domain }}",
+              "*.{{ private_domain }}",
+            ] 
+            + private_ips
+          }}
+      
+    - debug:
+        var: private_ips
+
+    - debug:
+        var: alternative_names
+
+    - name: Generate the Kubernetes Certificate
       shell: >
         cfssl gencert \
           -ca=./tls/ca.pem \
           -ca-key=./tls/ca-key.pem \
           -config=./tls/ca-config.json \
-          -hostname=127.0.0.1,kubernetes.default,*.{{ public_domain }},*.{{ private_domain }} \
+          -hostname={{ alternative_names | join(',') }} \
           -profile=kubernetes \
           ./tls/kubernetes-csr.json | cfssljson -bare ./tls/kubernetes
       when: kubernetes_key.stat.exists == False and kubernetes.stat.exists == False
@@ -193,7 +234,7 @@
         path: './tls/service-account.pem'
       register: service_account
 
-    - name: Generate the Control Manager Client Certificate
+    - name: Generate the Service Account Key Certificate
       shell: >
         cfssl gencert \
           -ca=./tls/ca.pem \
@@ -203,81 +244,43 @@
           ./tls/service-account-csr.json | cfssljson -bare ./tls/service-account
       when: service_account_key.stat.exists == False and service_account.stat.exists == False
 
-- name: Create Master and Worker groups
-  hosts: local
-  connection: local
-  gather_facts: no
-  vars_files:
-    - secret.yml
-  tags:
-    - copy
-  tasks:
-    - name: Get bastion node
-      ec2_instance_facts:
-        aws_access_key: '{{ aws_access_key }}'
-        aws_secret_key: '{{ aws_secret_key }}'
-        aws_region: '{{ aws_region }}'
-        filters:
-          "tag:Type": bastion
-          instance-state-name: ["running"]
-      register: bastion_nodes
-
-    - name: Get the IP address of the bastion
-      set_fact:
-        bastion_public_ip: '{{ bastion_nodes.instances[0].public_ip_address }}'
-
-    - name: Get worker nodes
-      ec2_instance_facts:
-        aws_access_key: '{{ aws_access_key }}'
-        aws_secret_key: '{{ aws_secret_key }}'
-        aws_region: '{{ aws_region }}'
-        filters:
-          "tag:Type": worker
-          instance-state-name: ["running"]
-      register: worker_nodes
-    
-    - name: Create the workers group
-      add_host:
-        name: '{{ item.instance_id }}'
-        group: workers
-        instance_id: '{{ item.instance_id }}'
-        ansible_host: '{{ item.network_interfaces[0].private_ip_address }}'
-        ansible_ssh_private_key_file: ./output/kube.pem
-        ansible_ssh_user: ubuntu
-        ansible_python_interpreter: /usr/bin/python3
-        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -i ./output/kube.pem -q ubuntu@{{ bastion_public_ip }} -o StrictHostKeyChecking=no"'
-      loop: '{{ worker_nodes.instances }}'
-
-    - name: Get master nodes
-      ec2_instance_facts:
-        aws_access_key: '{{ aws_access_key }}'
-        aws_secret_key: '{{ aws_secret_key }}'
-        aws_region: '{{ aws_region }}'
-        filters:
-          "tag:Type": master
-          instance-state-name: ["running"]
-      register: master_nodes
-    
-    - name: Create the masters group
-      add_host:
-        name: '{{ item.instance_id }}'
-        group: masters
-        instance_id: '{{ item.instance_id }}'
-        ansible_host: '{{ item.network_interfaces[0].private_ip_address }}'
-        ansible_ssh_private_key_file: ./output/kube.pem
-        ansible_ssh_user: ubuntu
-        ansible_python_interpreter: /usr/bin/python3
-        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -i ./output/kube.pem -q ubuntu@{{ bastion_public_ip }} -o StrictHostKeyChecking=no"'
-      loop: '{{ master_nodes.instances }}'
-
-- name: Copy certificates to Worker nodes
+- name: Create and copy certificates to Worker nodes
   hosts: workers
   gather_facts: no
   vars_files:
     - secret.yml
-  tags:
-    - copy
   tasks:
+    - name: Copy the instances json certificate request
+      delegate_to: localhost
+      template:
+        src: ./templates/client-csr.json
+        dest: './tls/{{ instance_id }}-csr.json'
+        mode: '0644'
+
+    - name: 'Check that the {{ instance_id }}-key.pem exists'
+      delegate_to: localhost
+      stat:
+        path: './tls/{{ instance_id }}-key.pem'
+      register: client_key
+
+    - name: Check that the worker.pem exists
+      delegate_to: localhost
+      stat:
+        path: './tls/{{ instance_id }}.pem'
+      register: client
+
+    - name: Generate the client certificate and private key
+      delegate_to: localhost
+      shell: >
+        cfssl gencert \
+          -ca=./tls/ca.pem \
+          -ca-key=./tls/ca-key.pem \
+          -config=./tls/ca-config.json \
+          -hostname={{ instance_id }},{{ ansible_host }},{{ instance_id }}.{{ private_domain }} \
+          -profile=kubernetes \
+          ./tls/{{ instance_id }}-csr.json | cfssljson -bare ./tls/{{ instance_id }}
+      when: client_key.stat.exists == False and client.stat.exists == False
+
     - name: Copy the ca.pem file
       copy:
         src: ./tls/ca.pem
@@ -301,8 +304,6 @@
   gather_facts: no
   vars_files:
     - secret.yml
-  tags:
-    - copy
   tasks:
     - name: Copy the ca.pem file
       copy:

@@ -66,6 +66,16 @@
     state: absent
     path: "./output/networking.yaml"
 
+- name: Delete the kubeconfigs folder
+  file:
+    state: absent
+    path: './kubeconfigs/'
+
+- name: Create an empty kubeconfigs folder
+  file:
+    state: directory
+    path: './kubeconfigs/'
+
 - name: Delete the tls folder
   file:
     state: absent

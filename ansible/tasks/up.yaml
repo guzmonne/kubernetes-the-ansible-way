@@ -9,6 +9,7 @@
     disable_rollback: true
     template_parameters:
       KubernetesClusterName: '{{ project_name }}'
+      PrivateHostedZoneName: '{{ private_domain }}'
     tags:
       Name: "{{ project_name }}_bastion"
       Project: "{{ project_name }}"
