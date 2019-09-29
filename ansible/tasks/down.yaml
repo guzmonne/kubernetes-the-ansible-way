@@ -1,6 +1,30 @@
 - set_fact:
     key_name: '{{ key_name | default(project_name) }}'
 
+# Retrieve the details for elb.foo.com
+- name: Retrieve the details for 'api.{{ public_domain }}'
+  route53:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: get
+    zone: '{{ public_domain }}'
+    record: 'api.{{ public_domain }}'
+    type: A
+  register: rec
+
+- name: Delete the 'api.{{ public_domain }}' record
+  route53:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: absent
+    zone: '{{ public_domain }}'
+    record: "{{ rec.set.record }}"
+    ttl: "{{ rec.set.ttl }}"
+    type: "{{ rec.set.type }}"
+    value: "{{ rec.set.value }}"
+    alias: True
+    alias_hosted_zone_id: "{{ rec.set.alias_hosted_zone_id }}"
+
 - name: Delete the Bastion Instance
   cloudformation:
     stack_name: '{{ project_name }}-bastion-instance'

@@ -1,18 +1,15 @@
 ---
-- name: Create/Delete Kubernetes Cluster
+- name: Create Kubernetes Cluster
   hosts: local
   connection: local
   gather_facts: no
   tags:
-    - setup
+    - up
   vars_files:
     - ./secret.yml
   tasks:
     - include_tasks: './tasks/up.yaml'
       when: state == 'present'
-    
-    - include_tasks: './tasks/down.yaml'
-      when: state != 'present'
 
 - name: Create the Master group
   hosts: local
@@ -20,8 +17,6 @@
   gather_facts: no
   vars_files:
     - secret.yml
-  tags:
-    - up
   vars:
     node_type: master
     group_name: masters
@@ -34,8 +29,6 @@
   gather_facts: no
   vars_files:
     - secret.yml
-  tags:
-    - up
   vars:
     node_type: worker
     group_name: workers
@@ -49,15 +42,13 @@
   gather_facts: no
   vars_files:
     - secret.yml
-  tags:
-    - up
   tasks:
     - name: 'Create the DNS entry for the {{ instance_id }} node'
       delegate_to: localhost
       route53:
         aws_access_key: "{{ aws_access_key }}"
         aws_secret_key: "{{ aws_secret_key }}"
-        state: present
+        state: '{{ state }}'
         zone: '{{ private_domain }}'
         record: '{{ instance_id }}.{{ private_domain }}'
         type: A
@@ -65,3 +56,15 @@
         value: '{{ ansible_host }}'
         wait: yes
         private_zone: yes
+
+- name: Delete Kubernetes Cluster
+  hosts: local
+  connection: local
+  gather_facts: no
+  tags:
+    - down
+  vars_files:
+    - ./secret.yml
+  tasks:
+    - include_tasks: './tasks/down.yaml'
+      when: state != 'present'

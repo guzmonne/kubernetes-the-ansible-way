@@ -2,24 +2,16 @@
 
 export ANSIBLE_CONFIG=./ansible.cfg
 
+cluster: up tls kubeconfigs encryption etcd kubernetes_control_plane
+
 up:
 	cd ./ansible;\
-	ansible-playbook cluster.yaml --extra-vars "state=present";\
+	ansible-playbook cluster.yaml --extra-vars "state=present" --skip-tags down;\
 	cd ..;
 
 down:
 	cd ./ansible;\
 	ansible-playbook cluster.yaml --extra-vars "state=absent" --skip-tags up;\
-	cd ..;
-
-secret:
-	cd ansible;\
-	ansible-vault edit secret.yml;\
-	cd ..;
-
-inventory:
-	cd ansible;\
-	ansible-inventory --list;\
 	cd ..;
 
 tls:
@@ -40,4 +32,19 @@ encryption:
 etcd:
 	cd ansible;\
 	ansible-playbook etcd.yaml;\
+	cd ..;
+
+kubernetes_control_plane:
+	cd ansible;\
+	ansible-playbook kubernetes_control_plane.yaml;\
+	cd ..;
+
+secret:
+	cd ansible;\
+	ansible-vault edit secret.yml;\
+	cd ..;
+
+inventory:
+	cd ansible;\
+	ansible-inventory --list;\
 	cd ..;

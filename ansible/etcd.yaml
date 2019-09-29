@@ -8,8 +8,6 @@
   vars:
     node_type: master
     group_name: masters
-  tags:
-    - inventory
   roles:
     - create_dynamic_node_group
   tasks:

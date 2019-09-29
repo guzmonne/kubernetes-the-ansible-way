@@ -65,12 +65,15 @@ Parameters:
   PublicSubnetIdC:
     Type: String
     Description: Public Subnet C Id
-  NetworkLoadBalancerName:
+  ApplicationLoadBalancerName:
     Type: String
     Description: Network Load Balancer Name
   VpcId:
     Type: String
     Description: VPC ID
+  CertificateArn:
+    Type: String
+    Description: Kubernetes API Certificate ARN
 Resources:
   
   LaunchTemplate:
@@ -130,7 +133,7 @@ Resources:
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
       TargetGroupARNs:
-        - !Ref TargetGroup6443
+        - !Ref TargetGroup
       VPCZoneIdentifier:
         - !Ref PrivateSubnetIdA
         - !Ref PrivateSubnetIdB
@@ -161,45 +164,72 @@ Resources:
           Value: master
           PropagateAtLaunch: 'true'
 
-  NetworkLoadBalancer:
+  ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       IpAddressType: ipv4
-      Name: !Ref NetworkLoadBalancerName
+      Name: !Ref ApplicationLoadBalancerName
       Scheme: internet-facing
       Subnets:
         - !Ref PublicSubnetIdA
         - !Ref PublicSubnetIdB
         - !Ref PublicSubnetIdC
-      Type: network
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Type: application
       Tags:
         - Key: Name
-          Value: !Ref NetworkLoadBalancerName
+          Value: !Ref ApplicationLoadBalancerName
         - Key: Project
           Value: !Ref ProjectName
 
-  Listener6443:
+  Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref TargetGroup6443
+        - TargetGroupArn: !Ref TargetGroup
           Type: forward
-      LoadBalancerArn: !Ref NetworkLoadBalancer
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 6443
-      Protocol: TCP
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
   
-  TargetGroup6443:
+  ListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: path-pattern
+          Values: 
+            - '/*'
+      ListenerArn: !Ref Listener
+      Priority: 1
+
+  TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTPS
+      HealthCheckPath: /healthz
       HealthCheckEnabled: true
       HealthCheckPort: 6443
-      HealthCheckProtocol: TCP
-      Name: TargetGroup6443
+      Name: TargetGroup
       Port: 6443
-      Protocol: TCP
+      Protocol: HTTPS
       VpcId: !Ref VpcId
       Tags:  
         - Key: Name
-          Value: TargetGroup6443
+          Value: TargetGroup
         - Key: Project
           Value: !Ref ProjectName
+
+Outputs:
+  ApplicationLoadBalancerDNSName:
+    Description: ALB DNS Name
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+  ApplicationLoadBalancerCanonicalHostedZoneID:
+    Description: ALB Canonical Hosted Zone ID
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
