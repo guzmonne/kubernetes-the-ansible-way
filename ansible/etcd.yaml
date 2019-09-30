@@ -53,54 +53,35 @@
         dest: '/home/{{ ansible_ssh_user }}'
         remote_src: yes
         
-    - name: Copy the etcd binary to /usr/local/bin/etcd
+    - name: 'Copy the {{ item }} binary to /usr/local/bin/{{ item }}'
       copy:
-        src: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64/etcd'
-        dest: /usr/local/bin/etcd
+        src: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64/{{ item }}'
+        dest: '/usr/local/bin/{{ item }}'
         mode: '0755'
         remote_src: yes
       become: true
+      loop:
+        - etcd
+        - etcdctl
 
-    - name: Copy the etcdctl binary to /usr/local/bin/etcd
-      copy:
-        src: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64/etcdctl'
-        dest: /usr/local/bin/etcdctl
-        mode: '0755'
-        remote_src: yes
-      become: true
-
-    - name: Make the /etc/etcd directory
+    - name: 'Make the {{ item }} directory'
       file:
         state: directory
-        path: '/etc/etcd'
+        path: '{{ item }}'
       become: true
+      loop:
+        - /etc/etcd
+        - /var/lib/etcd
 
-    - name: Make the /var/lib/etcd directory
-      file:
-        state: directory
-        path: '/var/lib/etcd'
-      become: true
-
-    - name: Copy ca.pem to /etc/etcd/
+    - name: 'Copy {{ item }} to /etc/etcd/'
       copy:
-        src: '/home/{{ ansible_ssh_user }}/ca.pem'
-        dest: '/etc/etcd/ca.pem'
-        remote_src: yes
+        src: './tls/{{ item }}'
+        dest: '/etc/etcd/{{ item }}'
       become: true
-
-    - name: Copy kubernetes-key.pem to /etc/etcd/
-      copy:
-        src: '/home/{{ ansible_ssh_user }}/kubernetes-key.pem'
-        dest: '/etc/etcd/kubernetes-key.pem'
-        remote_src: yes
-      become: true
-
-    - name: Copy kubernetes.pem to /etc/etcd/
-      copy:
-        src: '/home/{{ ansible_ssh_user }}/kubernetes.pem'
-        dest: '/etc/etcd/kubernetes.pem'
-        remote_src: yes
-      become: true
+      loop:
+        - ca.pem
+        - kubernetes-key.pem
+        - kubernetes.pem
 
     - name: Create the etcd.service file
       template:

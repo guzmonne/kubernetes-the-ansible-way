@@ -1,5 +1,5 @@
 ---
-- name: Create the Master group
+- name: Create the Worker group
   hosts: local
   connection: local
   gather_facts: no
@@ -200,12 +200,6 @@
             ] 
             + private_ips
           }}
-      
-    - debug:
-        var: private_ips
-
-    - debug:
-        var: alternative_names
 
     - name: Generate the Kubernetes Certificate
       shell: >
@@ -244,7 +238,7 @@
           ./tls/service-account-csr.json | cfssljson -bare ./tls/service-account
       when: service_account_key.stat.exists == False and service_account.stat.exists == False
 
-- name: Create and copy certificates to Worker nodes
+- name: Create certificates for Worker nodes
   hosts: workers
   gather_facts: no
   vars_files:
@@ -280,64 +274,3 @@
           -profile=kubernetes \
           ./tls/{{ instance_id }}-csr.json | cfssljson -bare ./tls/{{ instance_id }}
       when: client_key.stat.exists == False and client.stat.exists == False
-
-    - name: Copy the ca.pem file
-      copy:
-        src: ./tls/ca.pem
-        dest: '/home/{{ ansible_ssh_user }}/ca.pem'
-        mode: '0644'
-
-    - name: Copy the instance_id-key.pem certificate
-      copy:
-        src: './tls/{{ instance_id }}-key.pem'
-        dest: '/home/{{ ansible_ssh_user }}/{{ instance_id }}-key.pem'
-        mode: '0644'
-
-    - name: Copy the instance_id.pem certificate
-      copy:
-        src: './tls/{{ instance_id }}.pem'
-        dest: '/home/{{ ansible_ssh_user }}/{{ instance_id }}.pem'
-        mode: '0644'
-
-- name: Copy certificates to Master nodes
-  hosts: masters
-  gather_facts: no
-  vars_files:
-    - secret.yml
-  tasks:
-    - name: Copy the ca.pem file
-      copy:
-        src: ./tls/ca.pem
-        dest: '/home/{{ ansible_ssh_user }}/ca.pem'
-        mode: '0644'
-
-    - name: Copy the ca-key.pem file
-      copy:
-        src: ./tls/ca-key.pem
-        dest: '/home/{{ ansible_ssh_user }}/ca-key.pem'
-        mode: '0644'
-
-    - name: Copy the kubernetes-key.pem file
-      copy:
-        src: ./tls/kubernetes-key.pem
-        dest: '/home/{{ ansible_ssh_user }}/kubernetes-key.pem'
-        mode: '0644'
-
-    - name: Copy the kubernetes.pem file
-      copy:
-        src: ./tls/kubernetes.pem
-        dest: '/home/{{ ansible_ssh_user }}/kubernetes.pem'
-        mode: '0644'
-
-    - name: Copy the service-account-key.pem file
-      copy:
-        src: ./tls/service-account-key.pem
-        dest: '/home/{{ ansible_ssh_user }}/service-account-key.pem'
-        mode: '0644'
-
-    - name: Copy the service-account.pem file
-      copy:
-        src: ./tls/service-account.pem
-        dest: '/home/{{ ansible_ssh_user }}/service-account.pem'
-        mode: '0644'
-    

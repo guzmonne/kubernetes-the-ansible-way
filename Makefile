@@ -1,8 +1,8 @@
-.PHONY: up down secret
+.PHONY: up down secret tls kubeconfigs kubernetes_control_plane etcd inventory
 
 export ANSIBLE_CONFIG=./ansible.cfg
 
-cluster: up tls kubeconfigs encryption etcd kubernetes_control_plane
+cluster: up tls kubeconfigs etcd kubernetes_control_plane
 
 up:
 	cd ./ansible;\
@@ -24,19 +24,14 @@ kubeconfigs:
 	ansible-playbook kubeconfigs.yaml;\
 	cd ..;
 
-encryption:
-	cd ansible;\
-	ansible-playbook encryption.yaml;\
-	cd ..;
-
 etcd:
 	cd ansible;\
 	ansible-playbook etcd.yaml;\
 	cd ..;
 
-kubernetes_control_plane:
+control_plane:
 	cd ansible;\
-	ansible-playbook kubernetes_control_plane.yaml;\
+	ansible-playbook control_plane.yaml;\
 	cd ..;
 
 secret:

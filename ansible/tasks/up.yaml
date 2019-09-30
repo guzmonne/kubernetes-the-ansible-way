@@ -88,9 +88,8 @@
       PublicSubnetIdA: '{{ networking.stack_outputs.PublicSubnet3 }}'
       PublicSubnetIdB: '{{ networking.stack_outputs.PublicSubnet4 }}'
       PublicSubnetIdC: '{{ networking.stack_outputs.PublicSubnet5 }}'
-      ApplicationLoadBalancerName: '{{ application_load_balancer_name | default(project_name + "-alb") }}'
+      NetworkLoadBalancerName: '{{ network_load_balancer_name | default(project_name + "-alb") }}'
       VpcId: '{{ networking.stack_outputs.VpcId }}'
-      CertificateArn: '{{ certificate_arn }}'
   register: auto_scaling_group
 
 - name: Save Cloudformation Auto Scaling Group Output
@@ -106,6 +105,6 @@
     zone: '{{ public_domain }}'
     record: 'api.{{ public_domain }}'
     type: A
-    value: '{{ auto_scaling_group["stack_outputs"]["ApplicationLoadBalancerDNSName"] }}'
+    value: '{{ auto_scaling_group["stack_outputs"]["NetworkLoadBalancerDNSName"] }}'
     alias: True
-    alias_hosted_zone_id: '{{ auto_scaling_group["stack_outputs"]["ApplicationLoadBalancerCanonicalHostedZoneID"] }}'
+    alias_hosted_zone_id: '{{ auto_scaling_group["stack_outputs"]["NetworkLoadBalancerCanonicalHostedZoneID"] }}'

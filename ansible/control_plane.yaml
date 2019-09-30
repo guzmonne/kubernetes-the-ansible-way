@@ -103,13 +103,43 @@
         mode: '0644'
       become: true
 
+    - name: Install nginx
+      apt:
+        name: "{{ packages }}"
+        update_cache: yes
+      become: true
+      vars:
+        packages:
+        - nginx
+
+    - name: Create the kubernetes.default.svc.cluster.local nginx configuration file
+      template:
+        src: './templates/kubernetes.default.svc.cluster.local'
+        dest: '/etc/nginx/sites-available/kubernetes.default.svc.cluster.local'
+        mode: '0644'
+      become: true
+
+    - name: Enable the kubernetes.default.svc.cluster.local site
+      file:
+        src: "/etc/nginx/sites-available/kubernetes.default.svc.cluster.local"
+        dest: "/etc/nginx/sites-enabled/kubernetes.default.svc.cluster.local"
+        state: link
+      become: true
+
+    - name: Restart the nginx service
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: 'nginx'
+      become: true
+
     - name: Start the services
       systemd:
         state: started
         daemon_reload: yes
         name: '{{ item }}'
       become: true
-      loop: 
+      loop:
         - kube-apiserver
         - kube-controller-manager
         - kube-scheduler
@@ -118,11 +148,50 @@
   hosts: local
   connection: local
   gather_facts: no
+  tags:
+    - kubectl
   vars_files:
     - secret.yml
-  vars:
-    node_type: master
-    group_name: masters
-  roles:
-    - create_dynamic_node_group
-  tasks:
+  tasks:  
+    - name: Create the system:kube-apiserver-to-kubelet ClusterRole
+      k8s:
+        state: present
+        kubeconfig: './kubeconfigs/{{ project_name }}.kubeconfig'
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1beta1
+          kind: ClusterRole
+          metadata:
+            annotations:
+              rbac.authorization.kubernetes.io/autoupdate: "true"
+            labels:
+              kubernetes.io/bootstrapping: rbac-defaults
+            name: system:kube-apiserver-to-kubelet
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - nodes/proxy
+                - nodes/stats
+                - nodes/log
+                - nodes/spec
+                - nodes/metrics
+              verbs:
+                - "*"
+    - name: Bind the system:kube-apiserver-to-kubelet ClusterRole to the kubernetes user
+      k8s:
+        state: present
+        kubeconfig: './kubeconfigs/{{ project_name }}.kubeconfig'
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1beta1
+          kind: ClusterRoleBinding
+          metadata:
+            name: system:kube-apiserver
+            namespace: ""
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: system:kube-apiserver-to-kubelet
+          subjects:
+            - apiGroup: rbac.authorization.k8s.io
+              kind: User
+              name: Kubernetes
