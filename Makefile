@@ -1,29 +1,29 @@
-.PHONY: up down secret tls kubeconfigs control_plane etcd inventory
-
 export ANSIBLE_CONFIG=./ansible.cfg
 
-cluster: up tls kubeconfigs etcd control_plane workers
+.PHONY: up down secret 02_create_certificates 03_create_kubeconfigs 04_bootstrap_etcd 05_configure_masters 06_configure_workers inventory
 
-up:
-	ansible-playbook cluster.yaml --extra-vars "state=present" --skip-tags down
+up: 01_create_infraestructure 02_create_certificates 03_create_kubeconfigs 04_bootstrap_etcd 05_configure_masters 06_configure_workers
 
 down:
-	ansible-playbook cluster.yaml --extra-vars "state=absent" --skip-tags up
+	ansible-playbook 01_create_infraestructure.yaml --extra-vars "state=absent" --skip-tags up
 
-tls:
-	ansible-playbook tls.yaml
+01_create_infraestructure:
+	ansible-playbook 01_create_infraestructure.yaml --extra-vars "state=present" --skip-tags down
 
-kubeconfigs:
-	ansible-playbook kubeconfigs.yaml
+02_create_certificates:
+	ansible-playbook 02_create_certificates.yaml
 
-etcd:
-	ansible-playbook etcd.yaml
+03_create_kubeconfigs:
+	ansible-playbook 03_create_kubeconfigs.yaml
 
-control_plane:
-	ansible-playbook control_plane.yaml
+04_bootstrap_etcd:
+	ansible-playbook 04_bootstrap_etcd.yaml
 
-workers:
-	ansible-playbook workers.yaml
+05_configure_masters:
+	ansible-playbook 05_configure_masters.yaml
+
+06_configure_workers:
+	ansible-playbook 06_configure_workers.yaml
 
 secret:
 	ansible-vault edit secret.yml
