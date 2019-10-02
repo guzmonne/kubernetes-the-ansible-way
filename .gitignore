@@ -1,5 +1,5 @@
-ansible/password
-ansible/secret.yml
-ansible/output
-ansible/tls
-ansible/kubeconfigs
+password
+secret.yml
+output
+tls
+kubeconfigs
