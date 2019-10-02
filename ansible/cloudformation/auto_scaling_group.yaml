@@ -197,7 +197,7 @@ Resources:
       HealthCheckPath: /healthz
       HealthCheckEnabled: true
       Name: KubernetesAPITargetGroup
-      Port: 6443
+      Port: 443
       Protocol: TCP
       VpcId: !Ref VpcId
       Tags:  

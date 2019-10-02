@@ -2,17 +2,17 @@
     key_name: '{{ key_name | default(project_name) }}'
 
 # Retrieve the details for elb.foo.com
-- name: Retrieve the details for 'api.{{ public_domain }}'
+- name: Retrieve the details for '{{ kubernetes_api_private_uri }}'
   route53:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
     state: get
     zone: '{{ public_domain }}'
-    record: 'api.{{ public_domain }}'
+    record: '{{ kubernetes_api_private_uri }}'
     type: A
   register: rec
 
-- name: Delete the 'api.{{ public_domain }}' record
+- name: Delete the '{{ kubernetes_api_private_uri }}' record
   route53:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"

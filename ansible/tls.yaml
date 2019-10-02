@@ -1,5 +1,5 @@
 ---
-- name: Create the Worker group
+- name: Create the Masters group
   hosts: local
   connection: local
   gather_facts: no
@@ -11,7 +11,7 @@
   roles:
     - create_dynamic_node_group
 
-- name: Create the Worker group
+- name: Create the Workers group
   hosts: local
   connection: local
   gather_facts: no

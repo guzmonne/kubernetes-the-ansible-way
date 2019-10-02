@@ -92,12 +92,19 @@
       vars:
         initial_cluster: '{{ hostvars["DUMMY"]["initial_cluster"] }}'
 
-    - name: Start the etcd service
+    - name: Systemd Daemon Reload
       systemd:
-        state: started
         daemon_reload: yes
-        name: etcd
       become: true
+
+    - name: Start the services
+      service:
+        name: '{{ item }}'
+        state: started
+        enabled: yes
+      become: true
+      loop:
+        - etcd
 
 
 

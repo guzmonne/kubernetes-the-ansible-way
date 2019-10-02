@@ -13,6 +13,8 @@
 
 - name: Create the Master group
   hosts: local
+  tags:
+    - servers
   connection: local
   gather_facts: no
   vars_files:
@@ -25,6 +27,8 @@
 
 - name: Create the Worker group
   hosts: local
+  tags:
+    - servers
   connection: local
   gather_facts: no
   vars_files:
@@ -36,6 +40,8 @@
     - create_dynamic_node_group
 
 - name: Configure the servers
+  tags:
+    - servers
   hosts: 
     - masters
     - workers
@@ -43,7 +49,24 @@
   vars_files:
     - secret.yml
   tasks:
-    - name: 'Create the DNS entry for the {{ instance_id }} node'
+    - name: Name servers
+      hostname:
+        name: '{{ instance_id }}.{{ private_domain }}'
+      become: true
+
+    - name: Add the new name server to the hosts file
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '^127\.0\.0\.1[ \t]+localhost'
+        line: '127.0.0.1 localhost {{ instance_id }}.{{ private_domain }}'
+        state: present
+      become: true
+
+    - name: Reboot server
+      reboot:
+      become: true
+
+    - name: 'Create/Delete the DNS entry for each node'
       delegate_to: localhost
       route53:
         aws_access_key: "{{ aws_access_key }}"

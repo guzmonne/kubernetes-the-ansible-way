@@ -34,11 +34,14 @@
   vars_files:
     - secret.yml
   tasks:
-    - name: Create the Kubernetes configuration directory
+    - name: Create directories
       file:
         state: directory
-        path: '/etc/kubernetes/config'
+        path: '{{ item }}'
       become: true
+      loop:
+        - /etc/kubernetes/config
+        - /var/lib/kubernetes
 
     - name: Download binaries
       get_url:
@@ -51,12 +54,6 @@
         - kube-controller-manager
         - kube-scheduler
         - kubectl
-
-    - name: Create the Kubernetes directory
-      file:
-        state: directory
-        path: '/var/lib/kubernetes'
-      become: true
 
     - name: Copy files to the Kubernetes directory
       copy:
@@ -133,11 +130,16 @@
         name: 'nginx'
       become: true
 
-    - name: Start the services
+    - name: Systemd Daemon Reload
       systemd:
-        state: started
         daemon_reload: yes
+      become: true
+
+    - name: Start the services
+      service:
         name: '{{ item }}'
+        state: started
+        enabled: yes
       become: true
       loop:
         - kube-apiserver
