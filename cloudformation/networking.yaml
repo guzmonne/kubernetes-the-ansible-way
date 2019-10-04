@@ -170,7 +170,7 @@ Resources:
         - Key: Project
           Value: kubernetes-fundamentals
         - Key: Name
-          Value: kubernetes-fundamentals-public-route-table
+          Value: kubernetes-fundamentals-private-route-table
   PrivateSubnet0PrivateRouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:

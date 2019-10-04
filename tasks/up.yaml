@@ -46,11 +46,11 @@
     template: './cloudformation/instance.yaml'
     disable_rollback: true
     template_parameters:
-      InstanceName: '{{ bastion_name | default(project_name + "-bastion") }}'
+      InstanceName: '{{ aws_bastion_name }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
-      InstanceType: '{{ bastion_instance_type | default("t3.small") }}'
-      ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
+      InstanceType: '{{ aws_bastion_instance_type }}'
+      ImageId: '{{ aws_image_id }}'
       SubnetId: '{{ networking.stack_outputs.PublicSubnet3 }}'
   register: instance
 
@@ -70,25 +70,25 @@
     disable_rollback: true
     template_parameters:
       ProjectName: '{{ project_name }}'
-      MasterAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-master-asg") }}'
-      WorkerAutoScalingGroupName: '{{ auto_scaling_group_name | default(project_name + "-worker-asg") }}'
-      LaunchTemplateName: '{{ launch_configuration_name | default(project_name + "-lt") }}'
+      MasterAutoScalingGroupName: '{{ aws_master_asg_name }}'
+      WorkerAutoScalingGroupName: '{{ aws_worker_asg_name }}'
+      LaunchTemplateName: '{{ aws_lt_name }}'
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
-      InstanceType: '{{ instance_type | default("m5.large") }}'
-      ImageId: '{{ image_id | default("ami-064a0193585662d74") }}'
-      VolumeSize: '{{ volume_size | default(100) }}'
-      MasterDesiredCapacity: '{{ desired_capacity | default(3) }}'
-      WorkerDesiredCapacity: '{{ desired_capacity | default(3) }}'
-      MaxSize: '{{ min_size | default(8) }}'
-      MinSize: '{{ max_size | default(1) }}'
+      InstanceType: '{{ aws_default_instance_type }}'
+      ImageId: '{{ aws_image_id }}'
+      VolumeSize: '{{ aws_volume_size }}'
+      MasterDesiredCapacity: '{{ aws_master_asg_desired_capacity }}'
+      WorkerDesiredCapacity: '{{ aws_worker_asg_desired_capacity }}'
+      MinSize: '{{ aws_asg_min_size }}'
+      MaxSize: '{{ aws_asg_max_size }}'
       PrivateSubnetIdA: '{{ networking.stack_outputs.PrivateSubnet0 }}'
       PrivateSubnetIdB: '{{ networking.stack_outputs.PrivateSubnet1 }}'
       PrivateSubnetIdC: '{{ networking.stack_outputs.PrivateSubnet2 }}'
       PublicSubnetIdA: '{{ networking.stack_outputs.PublicSubnet3 }}'
       PublicSubnetIdB: '{{ networking.stack_outputs.PublicSubnet4 }}'
       PublicSubnetIdC: '{{ networking.stack_outputs.PublicSubnet5 }}'
-      NetworkLoadBalancerName: '{{ network_load_balancer_name | default(project_name + "-alb") }}'
+      NetworkLoadBalancerName: '{{ aws_nlb_name }}'
       VpcId: '{{ networking.stack_outputs.VpcId }}'
   register: auto_scaling_group
 
@@ -101,9 +101,10 @@
   route53:
     aws_access_key: "{{ aws_access_key }}"
     aws_secret_key: "{{ aws_secret_key }}"
+    overwrite: true
     state: present
     zone: '{{ public_domain }}'
-    record: '{{ kubernetes_api_private_uri }}'
+    record: '{{ kubernetes_api_public_uri }}'
     type: A
     value: '{{ auto_scaling_group["stack_outputs"]["NetworkLoadBalancerDNSName"] }}'
     alias: True

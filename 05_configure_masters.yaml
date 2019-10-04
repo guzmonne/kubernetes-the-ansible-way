@@ -100,36 +100,6 @@
         mode: '0644'
       become: true
 
-    - name: Install nginx
-      apt:
-        name: "{{ packages }}"
-        update_cache: yes
-      become: true
-      vars:
-        packages:
-        - nginx
-
-    - name: Create the kubernetes.default.svc.cluster.local nginx configuration file
-      template:
-        src: './templates/kubernetes.default.svc.cluster.local'
-        dest: '/etc/nginx/sites-available/kubernetes.default.svc.cluster.local'
-        mode: '0644'
-      become: true
-
-    - name: Enable the kubernetes.default.svc.cluster.local site
-      file:
-        src: "/etc/nginx/sites-available/kubernetes.default.svc.cluster.local"
-        dest: "/etc/nginx/sites-enabled/kubernetes.default.svc.cluster.local"
-        state: link
-      become: true
-
-    - name: Restart the nginx service
-      systemd:
-        state: restarted
-        daemon_reload: yes
-        name: 'nginx'
-      become: true
-
     - name: Systemd Daemon Reload
       systemd:
         daemon_reload: yes
@@ -196,4 +166,4 @@
           subjects:
             - apiGroup: rbac.authorization.k8s.io
               kind: User
-              name: Kubernetes
+              name: kubernetes

@@ -1,5 +1,5 @@
 {
-  "CN": "system:node:{{ instance_id }}",
+  "CN": "system:node:{{ instance_id }}.{{ private_domain }}",
   "key": {
     "algo": "rsa",
     "size": 2048

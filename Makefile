@@ -1,6 +1,6 @@
-export ANSIBLE_CONFIG=./ansible.cfg
-
 .PHONY: up down secret 02_create_certificates 03_create_kubeconfigs 04_bootstrap_etcd 05_configure_masters 06_configure_workers inventory
+
+export ANSIBLE_CONFIG=./ansible.cfg
 
 up: 01_create_infraestructure 02_create_certificates 03_create_kubeconfigs 04_bootstrap_etcd 05_configure_masters 06_configure_workers
 

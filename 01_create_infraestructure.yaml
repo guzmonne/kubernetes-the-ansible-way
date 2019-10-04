@@ -40,8 +40,6 @@
     - create_dynamic_node_group
 
 - name: Configure the servers
-  tags:
-    - servers
   hosts: 
     - masters
     - workers
@@ -50,11 +48,15 @@
     - secret.yml
   tasks:
     - name: Name servers
+      tags:
+        - up
       hostname:
         name: '{{ instance_id }}.{{ private_domain }}'
       become: true
 
     - name: Add the new name server to the hosts file
+      tags:
+        - up
       lineinfile:
         dest: /etc/hosts
         regexp: '^127\.0\.0\.1[ \t]+localhost'
@@ -63,6 +65,8 @@
       become: true
 
     - name: Reboot server
+      tags:
+        - up
       reboot:
       become: true
 
@@ -79,6 +83,18 @@
         value: '{{ ansible_host }}'
         wait: yes
         private_zone: yes
+
+    - name: Enable Source/Dest check
+      ec2_instance:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        instance_ids:
+          - '{{ instance_id }}'
+        network:
+          source_dest_check: False
+      delegate_to: localhost
+      tags:
+        - up
 
 - name: Delete Kubernetes Cluster
   hosts: local

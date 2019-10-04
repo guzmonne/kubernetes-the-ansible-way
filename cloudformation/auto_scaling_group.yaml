@@ -178,14 +178,14 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
-  Listener6443:
+  Listener443:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref KubernetesAPITargetGroup
           Type: forward
       LoadBalancerArn: !Ref NetworkLoadBalancer
-      Port: 6443
+      Port: 443
       Protocol: TCP
   
   KubernetesAPITargetGroup:
@@ -197,7 +197,7 @@ Resources:
       HealthCheckPath: /healthz
       HealthCheckEnabled: true
       Name: KubernetesAPITargetGroup
-      Port: 443
+      Port: 6443
       Protocol: TCP
       VpcId: !Ref VpcId
       Tags:  

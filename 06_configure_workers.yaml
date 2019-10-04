@@ -5,27 +5,44 @@
   gather_facts: no
   vars_files:
     - secret.yml
+    - ./output/networking.yaml
   vars:
     node_type: worker
     group_name: workers
   roles:
     - create_dynamic_node_group
   tasks:
-    - name: Associate the subnet for each worker
+    - name: Define a subnet for each worker
       set_fact:
-        workers_subnets: >
+        routes: >
           {{
-            (workers_subnets | default({}))
-            | combine({item: index})
+            (routes | default([]))
+            + [{"dest": ([10, 200, index, '0/24'] | join('.')), "instance_id": item}]
+          }}
+        worker_subnet_dict: >
+          {{
+            (worker_subnet_dict | default({}))
+            | combine({item: ([10, 200, index, '0/24'] | join('.'))})
           }}
       loop: '{{ groups["workers"] | sort(case_sensitive=False) }}'
       loop_control:
         index_var: index
 
-    - name: Creating the workers_subnets variable
+    - name: Creating the worker_subnet_dict variable
       add_host:
         name: DUMMY
-        workers_subnets: '{{ workers_subnets }}'
+        worker_subnet_dict: '{{ worker_subnet_dict }}'
+
+    - name: Update the private routing table.
+      ec2_vpc_route_table:
+        vpc_id: '{{ stack_outputs["VpcId"] }}'
+        region: '{{ aws_region }}'
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        purge_routes: no
+        tags:
+          'aws:cloudformation:logical-id': PrivateRouteTable
+        routes: '{{ routes }}'
 
 - name: Create the Kubernetes Contrl Plane
   hosts: workers
@@ -151,7 +168,7 @@
         mode: '0644'
       become: true
       vars:
-        subnet: '10.200.{{ hostvars["DUMMY"]["workers_subnets"][instance_id] }}.0/24'
+        subnet: '{{ hostvars["DUMMY"]["worker_subnet_dict"][instance_id] }}'
       loop:
         - 10-bridge.conf
         - 99-loopback.conf
@@ -203,7 +220,7 @@
         mode: '0644'
       become: true
       vars:
-        subnet: '10.200.{{ hostvars["DUMMY"]["workers_subnets"][instance_id] }}.0/24'
+        subnet: '{{ hostvars["DUMMY"]["worker_subnet_dict"][instance_id] }}'
 
     - name: Configure the Kubernetes Proxy
       copy:
@@ -244,3 +261,16 @@
         - containerd
         - kubelet
         - kube-proxy
+
+- name: Install the DNS Cluster Add-on
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  tasks:
+    - name: Deploy the coredns cluster add-on
+      k8s:
+        state: present
+        kubeconfig: './kubeconfigs/{{ project_name }}.kubeconfig'
+        definition: '{{ lookup("file", "./files/coredns.yml") }}'
