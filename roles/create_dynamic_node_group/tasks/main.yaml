@@ -8,6 +8,17 @@
       instance-state-name: ["running"]
   register: bastion_nodes
 
+- name: Check that there is at least one bastion node
+  block:
+    - assert:
+        that:
+          - (bastion_nodes.instances | length) > 0
+  rescue:
+    - debug:
+        msg: There is no bastion node available
+    - meta: clear_host_errors
+    - meta: end_play
+
 - name: Get the IP address of the bastion
   set_fact:
     bastion_public_ip: '{{ bastion_nodes.instances[0].public_ip_address }}'
