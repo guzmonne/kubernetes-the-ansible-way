@@ -33,3 +33,6 @@ secret:
 
 inventory:
 	ansible-inventory --list
+
+create_cluster:
+	ansible-playbook create_cluster.yaml
