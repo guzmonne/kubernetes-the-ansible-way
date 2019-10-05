@@ -1,0 +1,6 @@
+- name: Assert variables
+  assert:
+    that:
+      - certificates_folder is defined
+      - groups["masters"] is defined
+      - (groups["masters"] | length) > 0

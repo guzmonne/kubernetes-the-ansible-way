@@ -1,0 +1,12 @@
+- name: Check if kubectl is installed
+  shell: command -v kubectl > /dev/null 2>&1
+  register: output
+  ignore_errors: true
+
+- debug:
+    var: output
+
+- assert:
+    that:
+      - output.rc == 0
+    msg: kubectl is not installed

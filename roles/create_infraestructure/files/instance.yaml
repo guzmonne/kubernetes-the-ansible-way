@@ -1,0 +1,59 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  InstanceName:
+    Description: Name of the instance
+    Type: String
+  SecurityGroup:
+    Description: Security Group ID
+    Type: String
+  KeyName:
+    Description: SSH Key
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Description: EC2 Instance type
+    Type: String
+    Default: m5.large
+  ImageId:
+    Description: Instance ImageId
+    Type: String
+    Default: ami-064a0193585662d74
+  SubnetId:
+    Description: SubnetId for the instance
+    Type: String
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref ImageId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: True
+          DeleteOnTermination: True
+          SubnetId: !Ref SubnetId
+          DeviceIndex: '0'
+          GroupSet:
+          - !Ref SecurityGroup 
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+        - Key: Project
+          Value: cri
+        - Key: Type
+          Value: bastion
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            # Install cfssl
+            wget \
+              https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 \
+              https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+            chmod +x cfssl_linux-amd64 cfssljson_linux-amd64
+            sudo mv cfssl_linux-amd64 /usr/local/bin/cfssl
+            sudo mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
+            # Install pip
+            sudo apt-get update -y
+            sudo apt-get install python3-pip -y
+            pip3 install boto3

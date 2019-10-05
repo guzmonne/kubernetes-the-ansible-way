@@ -1,0 +1,207 @@
+- name: Copy ca-config.json
+  template:
+    src: '{{ role_path }}/templates/ca-config.json'
+    dest: '{{ certificates_folder }}/ca-config.json'
+    mode: '0644'
+
+- name: Copy ca-csr.json
+  template:
+    src: '{{ role_path }}/templates/ca-csr.json'
+    dest: '{{ certificates_folder }}/ca-csr.json'
+    mode: '0644'
+
+- name: Check that the ca-key exists
+  stat:
+    path: '{{ certificates_folder }}/ca-key.pem'
+  register: ca_key
+
+- name: Check that the ca.pem exists
+  stat:
+    path: '{{ certificates_folder }}/ca.pem'
+  register: ca
+
+- name: Generate the CA configuration file, certificate, and private key
+  shell: "cfssl gencert -initca {{ certificates_folder }}/ca-csr.json | cfssljson -bare {{ certificates_folder }}/ca"
+  when: ca_key.stat.exists == False and ca.stat.exists == False
+
+- name: Copy admin-csr.json
+  template:
+    src: '{{ role_path }}/templates/admin-csr.json'
+    dest: '{{ certificates_folder }}/admin-csr.json'
+    mode: '0644'
+
+- name: Check that the admin-key.pem exists
+  stat:
+    path: '{{ certificates_folder }}/admin-key.pem'
+  register: admin_key
+
+- name: Check that the admin.pem exists
+  stat:
+    path: '{{ certificates_folder }}/admin.pem'
+  register: admin
+
+- name: Generate the admin client certificate and private key
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -profile=kubernetes \
+      {{ certificates_folder }}/admin-csr.json | cfssljson -bare {{ certificates_folder }}/admin
+  when: admin_key.stat.exists == False and admin.stat.exists == False
+
+- name: Copy kube-controller-manager-csr.json
+  template:
+    src: '{{ role_path }}/templates/kube-controller-manager-csr.json'
+    dest: '{{ certificates_folder }}/kube-controller-manager-csr.json'
+    mode: '0644'
+
+- name: Check that the kube-controller-manager-key exists
+  stat:
+    path: '{{ certificates_folder }}/kube-controller-manager-key.pem'
+  register: kube_controller_manager_key
+
+- name: Check that the kube-controller-manager.pem exists
+  stat:
+    path: '{{ certificates_folder }}/kube-controller-manager.pem'
+  register: kube_controller_manager
+
+- name: Generate the Control Manager Client Certificate
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -profile=kubernetes \
+      {{ certificates_folder }}/kube-controller-manager-csr.json | cfssljson -bare {{ certificates_folder }}/kube-controller-manager
+  when: kube_controller_manager_key.stat.exists == False and kube_controller_manager.stat.exists == False
+
+- name: Copy kube-proxy-csr.json
+  template:
+    src: '{{ role_path }}/templates/kube-proxy-csr.json'
+    dest: '{{ certificates_folder }}/kube-proxy-csr.json'
+    mode: '0644'
+
+- name: Check that the kube-proxy-key exists
+  stat:
+    path: '{{ certificates_folder }}/kube-proxy-key.pem'
+  register: kube_proxy_key
+
+- name: Check that the kube-proxy.pem exists
+  stat:
+    path: '{{ certificates_folder }}/kube-proxy.pem'
+  register: kube_proxy
+
+- name: Generate the Kube Proxy Certificate
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -profile=kubernetes \
+      {{ certificates_folder }}/kube-proxy-csr.json | cfssljson -bare {{ certificates_folder }}/kube-proxy
+  when: kube_proxy_key.stat.exists == False and kube_proxy.stat.exists == False
+
+- name: Copy kube-scheduler-csr.json
+  template:
+    src: '{{ role_path }}/templates/kube-scheduler-csr.json'
+    dest: '{{ certificates_folder }}/kube-scheduler-csr.json'
+    mode: '0644'
+
+- name: Check that the kube-scheduler-key exists
+  stat:
+    path: '{{ certificates_folder }}/kube-scheduler-key.pem'
+  register: kube_scheduler_key
+
+- name: Check that the kube-scheduler.pem exists
+  stat:
+    path: '{{ certificates_folder }}/kube-scheduler.pem'
+  register: kube_scheduler
+
+- name: Generate the Kube Scheduler Certificate
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -profile=kubernetes \
+      {{ certificates_folder }}/kube-scheduler-csr.json | cfssljson -bare {{ certificates_folder }}/kube-scheduler
+  when: kube_scheduler_key.stat.exists == False and kube_scheduler.stat.exists == False
+
+- name: Copy kubernetes-csr.json
+  template:
+    src: '{{ role_path }}/templates/kubernetes-csr.json'
+    dest: '{{ certificates_folder }}/kubernetes-csr.json'
+    mode: '0644'
+
+- name: Check that the kubernetes-key exists
+  stat:
+    path: '{{ certificates_folder }}/kubernetes-key.pem'
+  register: kubernetes_key
+
+- name: Check that the kubernetes.pem exists
+  stat:
+    path: '{{ certificates_folder }}/kubernetes.pem'
+  register: kubernetes
+
+- name: Get master private IPs
+  set_fact:
+    private_ips: >
+      {{ ( private_ips | default([]) ) + [hostvars[item]["ansible_host"]] }}
+  loop: '{{ groups["masters"] }}'
+
+- name: Define the list of subject alternative names for the Kubernetes API Server certificate
+  set_fact:
+    alternative_names: >
+      {{
+        [
+          "10.32.0.1",
+          "127.0.0.1",
+          "kubernetes",
+          "kubernetes.default",
+          "kubernetes.default.svc",
+          "kubernetes.default.svc.cluster",
+          "kubernetes.default.svc.cluster.local",
+          "kubernetes.svc.cluster.local",
+          "*.{{ public_domain }}",
+          "*.{{ private_domain }}",
+        ] 
+        + private_ips
+      }}
+
+- name: Generate the Kubernetes Certificate
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -hostname={{ alternative_names | join(',') }} \
+      -profile=kubernetes \
+      {{ certificates_folder }}/kubernetes-csr.json | cfssljson -bare {{ certificates_folder }}/kubernetes
+  when: kubernetes_key.stat.exists == False and kubernetes.stat.exists == False
+
+- name: Copy service-account-csr.json
+  template:
+    src: '{{ role_path }}/templates/service-account-csr.json'
+    dest: '{{ certificates_folder }}/service-account-csr.json'
+    mode: '0644'
+
+- name: Check that the kubernetes-key exists
+  stat:
+    path: '{{ certificates_folder }}/service-account-key.pem'
+  register: service_account_key
+
+- name: Check that the service_account.pem exists
+  stat:
+    path: '{{ certificates_folder }}/service-account.pem'
+  register: service_account
+
+- name: Generate the Service Account Key Certificate
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -profile=kubernetes \
+      {{ certificates_folder }}/service-account-csr.json | cfssljson -bare {{ certificates_folder }}/service-account
+  when: service_account_key.stat.exists == False and service_account.stat.exists == False

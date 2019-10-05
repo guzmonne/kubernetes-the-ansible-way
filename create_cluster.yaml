@@ -1,0 +1,42 @@
+---
+- name: Create the infraestructure
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./secret.yml
+  roles:
+    - create_infraestructure
+
+- name: Create the Masters group
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  vars:
+    node_type: master
+    group_name: masters
+  roles:
+    - create_dynamic_node_group
+
+- name: Create the Workers group
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  vars:
+    node_type: worker
+    group_name: workers
+  roles:
+    - create_dynamic_node_group
+
+- name: Create the cluster certificates
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  roles:
+    - create_certificates

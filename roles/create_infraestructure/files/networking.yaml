@@ -1,0 +1,236 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  KubernetesClusterName:
+    Description: Nombre del cluster de Kubernetes
+    Type: String
+    Default: kubernetes-fundamentals
+  PrivateHostedZoneName:
+    Description: Nombre de la hosted zone privada
+    Type: String
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.240.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-vpc
+  PrivateHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties: 
+      Name: !Ref PrivateHostedZoneName
+      VPCs: 
+        - VPCId: !Ref VPC
+          VPCRegion: !Sub ${AWS::Region}
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-internet-gateway
+  InternetGatewayVPCAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PrivateSubnet0:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.240.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-private-subnet-0
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.240.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-private-subnet-1
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1c
+      CidrBlock: 10.240.2.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-private-subnet-2
+  PublicSubnet3:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1a
+      CidrBlock: 10.240.3.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-public-subnet-3
+  PublicSubnet4:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1b
+      CidrBlock: 10.240.4.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-public-subnet-4
+  PublicSubnet5:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: us-east-1c
+      CidrBlock: 10.240.5.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-public-subnet-5
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-public-route-table
+  PublicSubnet3PublicRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet3
+  PublicSubnet4PublicRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet4
+  PublicSubnet5PublicRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet5
+  PublicDefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+      DestinationCidrBlock: 0.0.0.0/0
+    DependsOn:
+      - InternetGateway
+      - InternetGatewayVPCAttachment
+  ElasticIP:
+    Type: 'AWS::EC2::EIP'
+    Properties: {}
+    DependsOn:
+      - InternetGateway
+  NatGateway:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-nat-gateway
+      SubnetId: !Ref PublicSubnet3
+    DependsOn:
+      - ElasticIP
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-private-route-table
+  PrivateSubnet0PrivateRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet0
+  PrivateSubnet1PrivateRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet1
+  PrivateSubnet2PrivateRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet2
+  PrivateDefaultRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+  KubernetesSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Default Security Group for project instances
+      GroupName: KubernetesSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Project
+          Value: kubernetes-fundamentals
+        - Key: Name
+          Value: kubernetes-fundamentals-instances-security-group
+Outputs:
+  VpcId:
+    Description: VPC Id
+    Value: !Ref VPC
+  SecurityGroupId:
+    Description: InstanceId
+    Value: !Ref KubernetesSecurityGroup
+  PrivateSubnet0:
+    Description: SubnetId for PrivateSubnet0
+    Value: !Ref PrivateSubnet0
+  PrivateSubnet1:
+    Description: SubnetId for PrivateSubnet1
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2:
+    Description: SubnetId for PrivateSubnet2
+    Value: !Ref PrivateSubnet2
+  PublicSubnet3:
+    Description: SubnetId for PublicSubnet3
+    Value: !Ref PublicSubnet3
+  PublicSubnet4:
+    Description: SubnetId for PublicSubnet4
+    Value: !Ref PublicSubnet4
+  PublicSubnet5:
+    Description: SubnetId for PublicSubnet5
+    Value: !Ref PublicSubnet5
