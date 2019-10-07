@@ -143,7 +143,7 @@
 
 - name: Create the encryption config file
   template:
-    src: ./templates/encryption-config.yaml
+    src: '{{ role_path }}/templates/encryption-config.yaml'
     dest: '{{ certificates_folder }}/encryption-config.yaml'
     mode: '0644'
   vars:
