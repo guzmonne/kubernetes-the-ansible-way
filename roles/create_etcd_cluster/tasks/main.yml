@@ -1,0 +1,87 @@
+- name: Creating the initial_cluster variable from the masters data
+  set_fact:
+    initial_cluster: >
+      {{ 
+        ( initial_cluster | default([]) )
+        + [
+          item
+          + "="
+          + "https://"
+          + hostvars[item]["ansible_host"]
+          + ":2380"
+        ] 
+      }}
+  loop: '{{ groups["masters"] }}'
+  delegate_to: localhost
+
+- set_fact:
+    initial_cluster: '{{ initial_cluster | join(",") }}'
+  delegate_to: localhost
+
+- name: Download the etcd Binaries
+  get_url:
+    url: https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz
+    dest: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64.tar.gz'
+    mode: '0644'
+
+- name: Make the '/home/{{ ansible_ssh_user }}/etcd' directory
+  file:
+    state: directory
+    path: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64'
+
+- name: Untar etcd
+  unarchive:
+    src: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64.tar.gz'
+    dest: '/home/{{ ansible_ssh_user }}'
+    remote_src: yes
+    
+- name: 'Copy the etcd binaries to /usr/local/bin/'
+  copy:
+    src: '/home/{{ ansible_ssh_user }}/etcd-v3.3.9-linux-amd64/{{ item }}'
+    dest: '/usr/local/bin/{{ item }}'
+    mode: '0755'
+    remote_src: yes
+  become: true
+  loop:
+    - etcd
+    - etcdctl
+
+- name: 'Make the etcd directories'
+  file:
+    state: directory
+    path: '{{ item }}'
+  become: true
+  loop:
+    - /etc/etcd
+    - /var/lib/etcd
+
+- name: 'Copy certificates to /etc/etcd/'
+  copy:
+    src: '{{ certificates_folder }}/{{ item }}'
+    dest: '/etc/etcd/{{ item }}'
+  become: true
+  loop:
+    - ca.pem
+    - kubernetes-key.pem
+    - kubernetes.pem
+
+- name: Create the etcd.service file
+  template:
+    src: '{{ role_path }}/templates/etcd.service'
+    dest: '/etc/systemd/system/etcd.service'
+    mode: '0644'
+  become: true
+
+- name: Systemd Daemon Reload
+  systemd:
+    daemon_reload: yes
+  become: true
+
+- name: Start the services
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  become: true
+  loop:
+    - etcd

@@ -1,0 +1,26 @@
+- name: Name servers
+  hostname:
+    name: '{{ instance_id }}'
+  become: true
+
+- name: Add the new name server to the hosts file
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '^127\.0\.0\.1[ \t]+localhost'
+    line: '127.0.0.1 localhost {{ instance_id }}'
+    state: present
+  become: true
+
+- name: Reboot server
+  reboot:
+  become: true
+
+- name: Enable Source/Dest check
+  ec2_instance:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    instance_ids:
+      - '{{ instance_id }}'
+    network:
+      source_dest_check: False
+  delegate_to: localhost

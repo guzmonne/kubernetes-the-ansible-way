@@ -1,2 +1,0 @@
-- include_tasks: ./01_assert_variables.yml
-- include_tasks: ./02_infraestructure.yml

@@ -9,7 +9,6 @@
     disable_rollback: true
     template_parameters:
       KubernetesClusterName: '{{ project_name }}'
-      PrivateHostedZoneName: '{{ private_domain }}'
     tags:
       Name: "{{ project_name }}_bastion"
       Project: "{{ project_name }}"
@@ -50,7 +49,7 @@
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
       InstanceType: '{{ aws_bastion_instance_type }}'
-      ImageId: '{{ aws_image_id }}'
+      ImageId: '{{ image_id }}'
       SubnetId: '{{ networking.stack_outputs.PublicSubnet3 }}'
   register: instance
 
@@ -76,7 +75,7 @@
       SecurityGroup: '{{ networking.stack_outputs.SecurityGroupId }}'
       KeyName: '{{ key_name }}'
       InstanceType: '{{ aws_default_instance_type }}'
-      ImageId: '{{ aws_image_id }}'
+      ImageId: '{{ image_id }}'
       VolumeSize: '{{ aws_volume_size }}'
       MasterDesiredCapacity: '{{ aws_master_asg_desired_capacity }}'
       WorkerDesiredCapacity: '{{ aws_worker_asg_desired_capacity }}'

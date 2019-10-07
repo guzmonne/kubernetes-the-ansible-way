@@ -1,0 +1,26 @@
+- name: Assert variables
+  assert:
+    that:
+      - aws_access_key is defined
+      - aws_region is defined
+      - aws_secret_key is defined
+      - certificates_folder is defined
+      - key_name is defined
+      - kubeconfigs_folder is defined
+      - kubernetes_api_public_uri is defined
+      - lt_name is defined
+      - master_asg_name is defined
+      - output_folder is defined
+      - project_name is defined
+      - public_domain is defined
+      - worker_asg_name is defined
+
+- name: Check if kubectl is installed
+  shell: command -v kubectl > /dev/null 2>&1
+  register: output
+  ignore_errors: true
+
+- assert:
+    that:
+      - output.rc == 0
+    msg: kubectl is not installed

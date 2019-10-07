@@ -36,3 +36,6 @@ inventory:
 
 create_cluster:
 	ansible-playbook create_cluster.yaml
+
+destroy_cluster:
+	ansible-playbook destroy_cluster.yaml

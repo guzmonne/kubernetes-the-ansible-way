@@ -3,3 +3,4 @@ secret.yml
 output
 tls
 kubeconfigs
+certificates

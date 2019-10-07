@@ -1,0 +1,223 @@
+- name: Define a subnet for each worker
+  set_fact:
+    worker_subnet_dict: >
+      {{
+        (worker_subnet_dict | default({}))
+        | combine({item: ([10, 200, index, '0/24'] | join('.'))})
+      }}
+  loop: '{{ groups["workers"] | sort(case_sensitive=False) }}'
+  loop_control:
+    index_var: index
+
+- name: Disable swap for the session
+  shell: swapoff -a
+  become: true
+
+- name: Disable swap persistantly
+  replace:
+    path: /etc/fstab
+    regexp: '^(.+?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  become: true
+
+- name: Install packages
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+  become: true
+  vars:
+    packages:
+    - socat
+    - conntrack
+    - ipset
+
+- name: Create directories
+  file:
+    state: directory
+    path: '{{ item }}'
+  become: true
+  loop:
+    - /etc/cni/net.d
+    - /opt/cni/bin
+    - /var/lib/kubelet
+    - /var/lib/kube-proxy
+    - /var/lib/kubernetes
+    - /var/run/kubernetes
+    - /etc/containerd/
+
+- name: Create containerd untar directory
+  file:
+    state: directory
+    path: '{{ item }}'
+  loop:
+    - containerd
+
+- name: Install Kubernetes worker binaries
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{ item }}'
+    dest: '/usr/local/bin/{{ item }}'
+    mode: '0744'
+  become: true
+  loop:
+    - kubelet
+    - kube-proxy
+    - kubectl
+
+- name: Install runc
+  get_url:
+    url: 'https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64'
+    dest: '/usr/local/bin/runc'
+    mode: '0744'
+  become: true
+
+- name: Download containerd, cri-tools, runc, and cni-plugins
+  get_url:
+    url: '{{ item }}'
+    dest: '/home/{{ ansible_ssh_user }}/'
+    mode: '0744'
+  loop:
+    - 'https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz'
+    - 'https://github.com/containernetworking/plugins/releases/download/v0.8.2/cni-plugins-linux-amd64-v0.8.2.tgz'
+    - 'https://github.com/containerd/containerd/releases/download/v1.2.9/containerd-1.2.9.linux-amd64.tar.gz'
+
+- name: Untar containerd
+  unarchive:
+    src: '/home/{{ ansible_ssh_user }}/containerd-1.2.9.linux-amd64.tar.gz'
+    dest: '/home/{{ ansible_ssh_user }}/containerd'
+    remote_src: yes
+
+- name: Copy containerd files
+  copy:
+    remote_src: yes
+    src: '/home/{{ ansible_ssh_user }}/containerd/bin/{{ item }}'
+    dest: '/bin/{{ item }}'
+    mode: '0755'
+  become: true
+  loop:
+    - containerd
+    - containerd-shim
+    - containerd-shim-runc-v1
+    - containerd-stress
+    - ctr
+
+- name: Untar crictl
+  unarchive:
+    src: '/home/{{ ansible_ssh_user }}/crictl-v1.15.0-linux-amd64.tar.gz'
+    dest: '/home/{{ ansible_ssh_user }}/'
+    remote_src: yes
+
+- name: Copy the crictl binary
+  copy:
+    remote_src: yes
+    src: '/home/{{ ansible_ssh_user }}/crictl'
+    dest: '/usr/local/bin/crictl'
+    mode: '0755'
+  become: true
+
+- name: Untar and install cni-plugins
+  unarchive:
+    src: '/home/{{ ansible_ssh_user }}/cni-plugins-linux-amd64-v0.8.2.tgz'
+    dest: '/opt/cni/bin/'
+    remote_src: yes
+  become: true
+
+- name: Create the network configuration files
+  template:
+    src: '{{ role_path }}/templates/{{ item }}'
+    dest: '/etc/cni/net.d/{{ item }}'
+    mode: '0644'
+  become: true
+  vars:
+    subnet: '{{ worker_subnet_dict[instance_id] }}'
+  loop:
+    - 10-bridge.conf
+    - 99-loopback.conf
+
+- name: Create the containerd configuration file
+  template:
+    src: '{{ role_path }}/templates/config.toml'
+    dest: '/etc/containerd/config.toml'
+    mode: '0644'
+  become: true
+
+- name: Create the containerd.service unit file
+  template:
+    src: '{{ role_path }}/templates/containerd.service'
+    dest: '/etc/systemd/system/containerd.service'
+    mode: '0644'
+  become: true
+
+- name: Copy the keys to the /var/lib/kubelet/ folder
+  copy:
+    src: '{{ certificates_folder }}/{{ item }}'
+    dest: '/var/lib/kubelet/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - '{{ instance_id }}.pem'
+    - '{{ instance_id }}-key.pem'
+
+- name: Copy the instance kubeconfig to the /var/lib/kubelet/ folder
+  copy:
+    src: '{{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig'
+    dest: '/var/lib/kubelet/kubeconfig'
+    mode: '0644'
+  become: true
+
+- name: Copy the keys to the /var/lib/kubernetes/ folder
+  copy:
+    src: '{{ certificates_folder }}/{{ item }}'
+    dest: '/var/lib/kubernetes/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - ca.pem
+
+- name: Create the kubelet-config.yaml configuration file
+  template:
+    src: '{{ role_path }}/templates/kubelet-config.yaml'
+    dest: '/var/lib/kubelet/kubelet-config.yaml'
+    mode: '0644'
+  become: true
+  vars:
+    subnet: '{{ worker_subnet_dict[instance_id] }}'
+
+- name: Configure the Kubernetes Proxy
+  copy:
+    src: '{{ kubeconfigs_folder }}/kube-proxy.kubeconfig'
+    dest: '/var/lib/kube-proxy/kubeconfig'
+    mode: '0644'
+  become: true
+
+- name: Create the kube-proxy-config.yaml configuration file
+  template:
+    src: '{{ role_path }}/templates/kube-proxy-config.yaml'
+    dest: '/var/lib/kube-proxy/kube-proxy-config.yaml'
+    mode: '0644'
+  become: true
+
+- name: Create the systemd unit files
+  template:
+    src: '{{ role_path }}/templates/{{ item }}'
+    dest: '/etc/systemd/system/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - kubelet.service
+    - kube-proxy.service
+
+- name: Systemd Daemon Reload
+  systemd:
+    daemon_reload: yes
+  become: true
+
+- name: Start the services
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  become: true
+  loop:
+    - containerd
+    - kubelet
+    - kube-proxy

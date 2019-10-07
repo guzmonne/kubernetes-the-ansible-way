@@ -1,0 +1,33 @@
+- name: Get bastion node facts
+  ec2_instance_facts:
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    aws_region: '{{ aws_region }}'
+    filters:
+      "tag:Type": 'bastion'
+      instance-state-name: ["running"]
+  register: bastion_nodes
+
+- name: Check that there is at least one bastion node
+  block:
+    - assert:
+        that:
+          - (bastion_nodes.instances | length) > 0
+  rescue:
+    - debug:
+        msg: There is no bastion node available
+    - meta: clear_host_errors
+    - meta: end_play
+
+- name: Get the IP address of the bastion
+  set_fact:
+    bastion_public_ip: '{{ bastion_nodes.instances[0].public_ip_address }}'
+
+- include_tasks: ./create_dynamic_group.yml
+  loop:
+    - node_type: master
+      name: masters
+    - node_type: worker
+      name: workers
+  loop_control:
+    loop_var: group

@@ -1,0 +1,30 @@
+- name: Copy the instances json certificate request
+  delegate_to: localhost
+  template:
+    src: '{{ role_path }}/templates/client-csr.json'
+    dest: '{{ certificates_folder }}/{{ instance_id }}-csr.json'
+    mode: '0644'
+
+- name: 'Check that the {{ instance_id }}-key.pem exists'
+  delegate_to: localhost
+  stat:
+    path: '{{ certificates_folder }}/{{ instance_id }}-key.pem'
+  register: client_key
+
+- name: Check that the worker.pem exists
+  delegate_to: localhost
+  stat:
+    path: '{{ certificates_folder }}/{{ instance_id }}.pem'
+  register: client
+
+- name: Generate the client certificate and private key
+  delegate_to: localhost
+  shell: >
+    cfssl gencert \
+      -ca={{ certificates_folder }}/ca.pem \
+      -ca-key={{ certificates_folder }}/ca-key.pem \
+      -config={{ certificates_folder }}/ca-config.json \
+      -hostname={{ instance_id }},{{ ansible_host }} \
+      -profile=kubernetes \
+      {{ certificates_folder }}/{{ instance_id }}-csr.json | cfssljson -bare {{ certificates_folder }}/{{ instance_id }}
+  when: client_key.stat.exists == False and client.stat.exists == False

@@ -1,0 +1,151 @@
+- name: Check if the kube-proxy.kubeconfig file exists
+  stat:
+    path: '{{ kubeconfigs_folder }}/kube-proxy.kubeconfig'
+  register: kube_proxy
+
+- name: Create the kube-proxy.kubeconfig file
+  shell: >
+    kubectl config set-cluster {{ project_name }} \
+      --certificate-authority={{ certificates_folder }}/ca.pem \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_public_uri }} \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-proxy.kubeconfig ;\
+
+    kubectl config set-credentials system:kube-proxy \
+      --client-certificate={{ certificates_folder }}/kube-proxy.pem \
+      --client-key={{ certificates_folder }}/kube-proxy-key.pem \
+      --embed-certs=true \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-proxy.kubeconfig ;\
+
+    kubectl config set-context default \
+      --cluster={{ project_name }} \
+      --user=system:kube-proxy \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-proxy.kubeconfig
+
+    kubectl config use-context default \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-proxy.kubeconfig
+  when: kube_proxy.stat.exists == False
+
+- name: Check if the kube-controller-manager.kubeconfig file exists
+  stat:
+    path: '{{ kubeconfigs_folder }}/kube-controller-manager.kubeconfig'
+  register: kube_controller_manager
+
+- name: Create the kube-controller-manager.kubeconfig file
+  shell: >
+    kubectl config set-cluster {{ project_name }} \
+      --certificate-authority={{ certificates_folder }}/ca.pem \
+      --embed-certs=true \
+      --server=https://127.0.0.1:6443 \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-controller-manager.kubeconfig ;\
+
+    kubectl config set-credentials system:kube-controller-manager \
+      --client-certificate={{ certificates_folder }}/kube-controller-manager.pem \
+      --client-key={{ certificates_folder }}/kube-controller-manager-key.pem \
+      --embed-certs=true \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-controller-manager.kubeconfig ;\
+
+    kubectl config set-context default \
+      --cluster={{ project_name }} \
+      --user=system:kube-controller-manager \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-controller-manager.kubeconfig
+
+    kubectl config use-context default \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-controller-manager.kubeconfig
+  when: kube_controller_manager.stat.exists == False
+
+- name: Check if the kube-scheduler.kubeconfig file exists
+  stat:
+    path: '{{ kubeconfigs_folder }}/kube-scheduler.kubeconfig'
+  register: kube_scheduler
+
+- name: Create the kube-scheduler.kubeconfig file
+  shell: >
+    kubectl config set-cluster {{ project_name }} \
+      --certificate-authority={{ certificates_folder }}/ca.pem \
+      --embed-certs=true \
+      --server=https://127.0.0.1:6443 \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-scheduler.kubeconfig ;\
+
+    kubectl config set-credentials system:kube-scheduler \
+      --client-certificate={{ certificates_folder }}/kube-scheduler.pem \
+      --client-key={{ certificates_folder }}/kube-scheduler-key.pem \
+      --embed-certs=true \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-scheduler.kubeconfig ;\
+
+    kubectl config set-context default \
+      --cluster={{ project_name }} \
+      --user=system:kube-scheduler \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-scheduler.kubeconfig
+
+    kubectl config use-context default \
+      --kubeconfig={{ kubeconfigs_folder }}/kube-scheduler.kubeconfig
+  when: kube_scheduler.stat.exists == False
+
+- name: Check if the admin.kubeconfig file exists
+  stat:
+    path: '{{ kubeconfigs_folder }}/admin.kubeconfig'
+  register: admin
+
+- name: Create the admin.kubeconfig file
+  shell: >
+    kubectl config set-cluster {{ project_name }} \
+      --certificate-authority={{ certificates_folder }}/ca.pem \
+      --embed-certs=true \
+      --server=https://127.0.0.1:6443 \
+      --kubeconfig={{ kubeconfigs_folder }}/admin.kubeconfig ;\
+
+    kubectl config set-credentials admin \
+      --client-certificate={{ certificates_folder }}/admin.pem \
+      --client-key={{ certificates_folder }}/admin-key.pem \
+      --embed-certs=true \
+      --kubeconfig={{ kubeconfigs_folder }}/admin.kubeconfig ;\
+
+    kubectl config set-context default \
+      --cluster={{ project_name }} \
+      --user=system:admin \
+      --kubeconfig={{ kubeconfigs_folder }}/admin.kubeconfig
+
+    kubectl config use-context default \
+      --kubeconfig={{ kubeconfigs_folder }}/admin.kubeconfig
+  when: admin.stat.exists == False
+
+- name: 'Check if the {{ project_name }}.kubeconfig file exists'
+  stat:
+    path: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
+  register: kubeconfig
+
+- name: Create the {{ project_name }}.kubeconfig file
+  shell: >
+    kubectl config set-cluster {{ project_name }} \
+      --certificate-authority={{ certificates_folder }}/ca.pem \
+      --embed-certs=true \
+      --server=https://{{ kubernetes_api_public_uri }} \
+      --kubeconfig={{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig
+
+    kubectl config set-credentials admin \
+      --client-certificate={{ certificates_folder }}/admin.pem \
+      --client-key={{ certificates_folder }}/admin-key.pem \
+      --kubeconfig={{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig
+
+    kubectl config set-context {{ project_name }} \
+      --cluster={{ project_name }} \
+      --user=admin \
+      --kubeconfig={{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig
+
+    kubectl config use-context {{ project_name }} --kubeconfig={{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig
+  when: kubeconfig.stat.exists == False
+
+- name: 'Check if the encryption-config file exists'
+  stat:
+    path: '{{ certificates_folder }}/encryption-config.yaml'
+  register: encryption_config
+
+- name: Create the encryption config file
+  template:
+    src: ./templates/encryption-config.yaml
+    dest: '{{ certificates_folder }}/encryption-config.yaml'
+    mode: '0644'
+  vars:
+    secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters') }}"
+  when: encryption_config.stat.exists == False

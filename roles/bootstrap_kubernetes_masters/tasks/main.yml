@@ -1,0 +1,95 @@
+- name: Creating the etcd_servers variable
+  set_fact:
+    etcd_servers: >
+      {{ 
+        ( etcd_servers | default([]) )
+        + [
+          "https://"
+          + hostvars[item]["ansible_host"]
+          + ":2379"
+        ] 
+      }}
+  loop: '{{ groups["masters"] }}'
+
+- set_fact:
+    etcd_servers: '{{ etcd_servers | join(",") }}'
+
+- name: Create directories
+  file:
+    state: directory
+    path: '{{ item }}'
+  become: true
+  loop:
+    - /etc/kubernetes/config
+    - /var/lib/kubernetes
+
+- name: Download binaries
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{ item }}'
+    dest: '/usr/local/bin/{{ item }}'
+    mode: '0744'
+  become: true
+  loop:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+    - kubectl
+
+- name: Copy files to the Kubernetes directory
+  copy:
+    src: '{{ certificates_folder }}/{{ item }}'
+    dest: '/var/lib/kubernetes/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - ca.pem
+    - ca-key.pem
+    - kubernetes-key.pem
+    - kubernetes.pem
+    - service-account-key.pem
+    - service-account.pem
+    - encryption-config.yaml
+
+- name: Move the kubeconfig files to the Kubernetes directory
+  copy:
+    src: '{{ kubeconfigs_folder }}/{{ item }}'
+    dest: '/var/lib/kubernetes/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - kube-controller-manager.kubeconfig
+    - kube-scheduler.kubeconfig
+
+- name: Create the services file
+  template:
+    src: '{{ role_path }}/templates/{{ item }}'
+    dest: '/etc/systemd/system/{{ item }}'
+    mode: '0644'
+  become: true
+  loop:
+    - kube-apiserver.service
+    - kube-controller-manager.service
+    - kube-scheduler.service
+
+- name: Create the kube-scheduler.yaml configuration file
+  template:
+    src: '{{ role_path }}/templates/kube-scheduler.yaml'
+    dest: '/etc/kubernetes/config/kube-scheduler.yaml'
+    mode: '0644'
+  become: true
+
+- name: Systemd Daemon Reload
+  systemd:
+    daemon_reload: yes
+  become: true
+
+- name: Start the services
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  become: true
+  loop:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler

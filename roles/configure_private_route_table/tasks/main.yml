@@ -1,0 +1,25 @@
+- name: Define a subnet for each worker
+  set_fact:
+    routes: >
+      {{
+        (routes | default([]))
+        + [{"dest": ([10, 200, index, '0/24'] | join('.')), "instance_id": item}]
+      }}
+  loop: '{{ groups["workers"] | sort(case_sensitive=False) }}'
+  loop_control:
+    index_var: index
+
+- name: Add the networking cloudformation stack outputs as variables
+  include_vars:
+    file: '{{ output_folder }}/networking.yaml'
+
+- name: Update the private routing table.
+  ec2_vpc_route_table:
+    vpc_id: '{{ stack_outputs["VpcId"] }}'
+    region: '{{ aws_region }}'
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    purge_routes: no
+    tags:
+      'aws:cloudformation:logical-id': PrivateRouteTable
+    routes: '{{ routes }}'

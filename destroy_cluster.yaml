@@ -1,0 +1,12 @@
+---
+- name: Create the infraestructure
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./secret.yml
+  vars:
+    state: absent
+  roles:
+    - assert_requirements
+    - infrastructure

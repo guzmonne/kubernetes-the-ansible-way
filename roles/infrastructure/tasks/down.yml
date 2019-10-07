@@ -1,0 +1,122 @@
+- name: Retrieve the details for '{{ kubernetes_api_public_uri }}'
+  route53:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: get
+    zone: '{{ public_domain }}'
+    record: '{{ kubernetes_api_public_uri }}'
+    type: A
+  register: rec
+
+- name: Delete the '{{ kubernetes_api_public_uri }}' record
+  route53:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: absent
+    zone: '{{ public_domain }}'
+    record: "{{ rec.set.record }}"
+    ttl: "{{ rec.set.ttl }}"
+    type: "{{ rec.set.type }}"
+    value: "{{ rec.set.value }}"
+    alias: True
+    alias_hosted_zone_id: "{{ rec.set.alias_hosted_zone_id }}"
+  when: rec.set.alias_hosted_zone_id is defined
+
+- name: Create Cloudformation Auto Scaling Groups Stacks
+  cloudformation:
+    stack_name: '{{ asg_stack_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    state: absent
+    region: '{{ aws_region }}'
+    template: '{{ role_path }}/files/auto_scaling_group.yaml'
+    disable_rollback: true
+  register: auto_scaling_group
+
+- name: EC2 Key
+  ec2_key:
+    name: '{{ key_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    region: '{{ aws_region }}'
+    state: absent
+  register: ec2_key
+
+- name: Create the Bastion Instance
+  cloudformation:
+    stack_name: '{{ bastion_stack_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    state: absent
+    region: '{{ aws_region }}'
+    template: '{{ role_path }}/files/instance.yaml'
+    disable_rollback: true
+  register: instance
+
+- name: Networking infraestructure
+  cloudformation:
+    stack_name: "{{ networking_stack_name }}"
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    state: absent
+    region: "{{ aws_region }}"
+    template: '{{ role_path }}/files/networking.yaml'
+    disable_rollback: true
+    tags:
+      Name: "{{ networking_stack_name }}"
+      Project: "{{ project_name }}"
+  register: networking
+
+- name: Delete Cloudformation Instance Output
+  file:
+    state: absent
+    path: '{{ output_folder }}/instance.yaml'
+
+- name: Delete the Auto Scaling Group output
+  file:
+    state: absent
+    path: '{{ output_folder }}/auto_scaling_group.yaml'
+
+- name: Delete the EC2 Key
+  ec2_key:
+    name: '{{ key_name }}'
+    aws_access_key: '{{ aws_access_key }}'
+    aws_secret_key: '{{ aws_secret_key }}'
+    region: '{{ aws_region }}'
+    state: absent
+
+- name: Delete the private key
+  file:
+    state: absent
+    path: '{{ output_folder }}/{{ key_name }}.pem'
+  when: state == "absent"
+
+- name: Delete Cloudformation Instances Output
+  file:
+    state: absent
+    path: "{{ output_folder }}/instance.yaml"
+
+- name: Delete Cloudformation Networking Output
+  file:
+    state: absent
+    path: "{{ output_folder }}/networking.yaml"
+
+- name: Delete the kubeconfigs folder
+  file:
+    state: absent
+    path: '{{ kubeconfigs_folder }}'
+
+- name: Create an empty kubeconfigs folder
+  file:
+    state: directory
+    path: '{{ kubeconfigs_folder }}'
+
+- name: Delete the certificates folder
+  file:
+    state: absent
+    path: '{{ certificates_folder }}'
+
+- name: Create an empty certificates folder
+  file:
+    state: directory
+    path: '{{ certificates_folder }}'

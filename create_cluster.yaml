@@ -5,38 +5,50 @@
   gather_facts: no
   vars_files:
     - ./secret.yml
-  roles:
-    - create_infraestructure
-
-- name: Create the Masters group
-  hosts: local
-  connection: local
-  gather_facts: no
-  vars_files:
-    - secret.yml
   vars:
-    node_type: master
-    group_name: masters
+    state: present
   roles:
-    - create_dynamic_node_group
-
-- name: Create the Workers group
-  hosts: local
-  connection: local
-  gather_facts: no
-  vars_files:
-    - secret.yml
-  vars:
-    node_type: worker
-    group_name: workers
-  roles:
-    - create_dynamic_node_group
-
-- name: Create the cluster certificates
-  hosts: local
-  connection: local
-  gather_facts: no
-  vars_files:
-    - secret.yml
-  roles:
+    - assert_requirements
+    - infrastructure
+    - create_dynamic_groups
     - create_certificates
+    - create_kubeconfigs
+    - configure_private_route_table
+
+- name: Configure the master nodes
+  hosts: masters
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  roles:
+    - configure_servers
+    - create_etcd_cluster
+    - bootstrap_kubernetes_masters
+
+- name: Configure the worker nodes
+  hosts: workers
+  gather_facts: no
+  serial: 1
+  vars_files:
+    - secret.yml
+  roles:
+    - configure_servers
+    - create_worker_certificates
+    - create_worker_kubeconfigs
+
+- name: Configure the worker nodes
+  hosts: workers
+  gather_facts: no
+  vars_files:
+    - secret.yml
+  roles:
+    - bootstrap_kubernetes_workers
+
+- name: Configure the Kubernetes cluster
+  hosts: local
+  connection: local
+  gather_facts: no
+  vars_files:
+    - ./secret.yml
+  roles:
+    - kubernetes_configuration

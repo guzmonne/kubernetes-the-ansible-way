@@ -13,8 +13,6 @@
 
 - name: Create the Master group
   hosts: local
-  tags:
-    - servers
   connection: local
   gather_facts: no
   vars_files:
@@ -27,8 +25,6 @@
 
 - name: Create the Worker group
   hosts: local
-  tags:
-    - servers
   connection: local
   gather_facts: no
   vars_files:
@@ -51,7 +47,7 @@
       tags:
         - up
       hostname:
-        name: '{{ instance_id }}.{{ private_domain }}'
+        name: '{{ instance_id }}'
       become: true
 
     - name: Add the new name server to the hosts file
@@ -60,7 +56,7 @@
       lineinfile:
         dest: /etc/hosts
         regexp: '^127\.0\.0\.1[ \t]+localhost'
-        line: '127.0.0.1 localhost {{ instance_id }}.{{ private_domain }}'
+        line: '127.0.0.1 localhost {{ instance_id }}'
         state: present
       become: true
 
@@ -69,20 +65,6 @@
         - up
       reboot:
       become: true
-
-    - name: 'Create/Delete the DNS entry for each node'
-      delegate_to: localhost
-      route53:
-        aws_access_key: "{{ aws_access_key }}"
-        aws_secret_key: "{{ aws_secret_key }}"
-        state: '{{ state }}'
-        zone: '{{ private_domain }}'
-        record: '{{ instance_id }}.{{ private_domain }}'
-        type: A
-        ttl: 7200
-        value: '{{ ansible_host }}'
-        wait: yes
-        private_zone: yes
 
     - name: Enable Source/Dest check
       ec2_instance:

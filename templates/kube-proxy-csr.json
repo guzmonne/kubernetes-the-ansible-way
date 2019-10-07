@@ -6,11 +6,11 @@
   },
   "names": [
     {
-      "C": "US",
-      "L": "Portland",
+      "C": "{{ country_name }}",
+      "L": "{{ locality }}",
       "O": "system:node-proxier",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
+      "OU": "{{ project_name }}",
+      "ST": "{{ state_or_province_name }}"
     }
   ]
 }

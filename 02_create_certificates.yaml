@@ -195,8 +195,7 @@
               "kubernetes.default.svc.cluster",
               "kubernetes.default.svc.cluster.local",
               "kubernetes.svc.cluster.local",
-              "*.{{ public_domain }}",
-              "*.{{ private_domain }}",
+              "*.{{ public_domain }}"
             ] 
             + private_ips
           }}
@@ -270,7 +269,7 @@
           -ca=./tls/ca.pem \
           -ca-key=./tls/ca-key.pem \
           -config=./tls/ca-config.json \
-          -hostname={{ instance_id }},{{ ansible_host }},{{ instance_id }}.{{ private_domain }} \
+          -hostname={{ instance_id }},{{ ansible_host }},{{ instance_id }} \
           -profile=kubernetes \
           ./tls/{{ instance_id }}-csr.json | cfssljson -bare ./tls/{{ instance_id }}
       when: client_key.stat.exists == False and client.stat.exists == False
