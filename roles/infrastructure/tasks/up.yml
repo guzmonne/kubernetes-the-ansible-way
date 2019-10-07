@@ -1,3 +1,18 @@
+- name: Create an empty certificates folder
+  file:
+    state: directory
+    path: '{{ certificates_folder }}'
+
+- name: Create an empty kubeconfigs folder
+  file:
+    state: directory
+    path: '{{ kubeconfigs_folder }}'
+
+- name: Create an empty output folder
+  file:
+    state: directory
+    path: '{{ output_folder }}'
+
 - name: Networking infraestructure
   cloudformation:
     stack_name: "{{ networking_stack_name }}"

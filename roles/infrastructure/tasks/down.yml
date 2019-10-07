@@ -101,22 +101,17 @@
     state: absent
     path: "{{ output_folder }}/networking.yaml"
 
+- name: Delete the outputs folder
+  file:
+    state: absent
+    path: '{{ outputs_folder }}'
+
 - name: Delete the kubeconfigs folder
   file:
     state: absent
     path: '{{ kubeconfigs_folder }}'
 
-- name: Create an empty kubeconfigs folder
-  file:
-    state: directory
-    path: '{{ kubeconfigs_folder }}'
-
 - name: Delete the certificates folder
   file:
     state: absent
-    path: '{{ certificates_folder }}'
-
-- name: Create an empty certificates folder
-  file:
-    state: directory
     path: '{{ certificates_folder }}'
