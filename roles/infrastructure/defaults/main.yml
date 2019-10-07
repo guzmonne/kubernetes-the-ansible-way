@@ -2,10 +2,8 @@ networking_stack_name: '{{ project_name }}-networking'
 bastion_stack_name: '{{ project_name }}-bastion'
 bastion_instance_name: '{{ project_name }}-bastion-instance'
 bastion_instance_type: t3.small
-bastion_instance_image_id: ami-064a0193585662d74
 asg_stack_name: '{{ project_name }}-asg'
 asg_default_instance_type: m5.large
-asg_image_id: ami-064a0193585662d74
 asg_volume_size: 100
 master_asg_desired_capacity: 3
 worker_asg_desired_capacity: 3

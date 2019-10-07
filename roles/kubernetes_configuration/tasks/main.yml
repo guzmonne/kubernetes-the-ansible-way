@@ -54,7 +54,7 @@
   k8s:
     state: present
     kubeconfig: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
-    definition: '{{ lookup("file", "{{ role_path }}/kubernetes-dashboard.yml") }}'
+    definition: '{{ lookup("file", role_path + "/files/kubernetes-dashboard.yml") }}'
 
 - name: Create the kubernetes-dashboard namespace
   k8s:
