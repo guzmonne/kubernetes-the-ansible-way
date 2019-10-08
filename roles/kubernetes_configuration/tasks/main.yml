@@ -142,3 +142,117 @@
         kind: ClusterRole
         name: k9s
         apiGroup: rbac.authorization.k8s.io
+
+- name: Create the tiller ServiceAccount
+  k8s:
+    state: present
+    kubeconfig: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: tiller
+        namespace: kube-system
+
+- name: Create the tiller ClusterRole
+  k8s:
+    state: present
+    kubeconfig: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: tiller
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+        - kind: ServiceAccount
+          name: tiller
+          namespace: kube-system
+
+- name: Create the helm Deployment
+  k8s:
+    state: present
+    kubeconfig: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: helm
+          name: tiller
+        name: tiller-deploy
+        namespace: kube-system
+      spec:
+        replicas: 1
+        strategy: {}
+        selector:
+          matchLabels:
+            app: helm
+            name: tiller
+        template:
+          metadata:
+            creationTimestamp: null
+            labels:
+              app: helm
+              name: tiller
+          spec:
+            automountServiceAccountToken: true
+            containers:
+            - env:
+              - name: TILLER_NAMESPACE
+                value: kube-system
+              - name: TILLER_HISTORY_MAX
+                value: "200"
+              image: gcr.io/kubernetes-helm/tiller:v2.14.1
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                httpGet:
+                  path: /liveness
+                  port: 44135
+                initialDelaySeconds: 1
+                timeoutSeconds: 1
+              name: tiller
+              ports:
+              - containerPort: 44134
+                name: tiller
+              - containerPort: 44135
+                name: http
+              readinessProbe:
+                httpGet:
+                  path: /readiness
+                  port: 44135
+                initialDelaySeconds: 1
+                timeoutSeconds: 1
+              resources: {}
+            serviceAccountName: tiller
+      status: {}
+
+- name: Create the helm Service
+  k8s:
+    state: present
+    kubeconfig: '{{ kubeconfigs_folder }}/{{ project_name }}.kubeconfig'
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: helm
+          name: tiller
+        name: tiller-deploy
+        namespace: kube-system
+      spec:
+        ports:
+        - name: tiller
+          port: 44134
+          targetPort: tiller
+        selector:
+          app: helm
+          name: tiller
+        type: ClusterIP
+      status:
+        loadBalancer: {}

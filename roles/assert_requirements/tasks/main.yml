@@ -14,6 +14,11 @@
       - project_name is defined
       - public_domain is defined
       - worker_asg_name is defined
+      - kubernetes_version is defined
+      - runc_version is defined
+      - cri_version is defined
+      - cni_plugins_version is defined
+      - containerd_version is defined
 
 - name: Check if kubectl is installed
   shell: command -v kubectl > /dev/null 2>&1
