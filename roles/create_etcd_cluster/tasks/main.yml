@@ -4,7 +4,7 @@
       {{ 
         ( initial_cluster | default([]) )
         + [
-          item
+          hostvars[item]["private_dns_name"]
           + "="
           + "https://"
           + hostvars[item]["ansible_host"]

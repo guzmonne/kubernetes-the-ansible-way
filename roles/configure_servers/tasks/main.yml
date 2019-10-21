@@ -1,13 +1,13 @@
 - name: Name servers
   hostname:
-    name: '{{ instance_id }}'
+    name: '{{ private_dns_name }}'
   become: true
 
 - name: Add the new name server to the hosts file
   lineinfile:
     dest: /etc/hosts
     regexp: '^127\.0\.0\.1[ \t]+localhost'
-    line: '127.0.0.1 localhost {{ instance_id }}'
+    line: '127.0.0.1 localhost {{ private_dns_name }}'
     state: present
   become: true
 

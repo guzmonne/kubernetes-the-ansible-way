@@ -1,7 +1,7 @@
 - name: Check that the worker kubeconfig exists
   delegate_to: localhost
   stat:
-    path: '{{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig'
+    path: '{{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig'
   register: kubeconfig
 
 - name: Create the kubeconfig files for each worker node
@@ -11,19 +11,19 @@
       --certificate-authority={{ certificates_folder }}/ca.pem \
       --embed-certs=true \
       --server=https://{{ kubernetes_api_public_uri }} \
-      --kubeconfig={{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig ;\
+      --kubeconfig={{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig ;\
     
-    kubectl config set-credentials system:node:{{ instance_id }} \
-      --client-certificate={{ certificates_folder }}/{{ instance_id }}.pem \
-      --client-key={{ certificates_folder }}/{{ instance_id }}-key.pem \
+    kubectl config set-credentials system:node:{{ private_dns_name }} \
+      --client-certificate={{ certificates_folder }}/{{ private_dns_name }}.pem \
+      --client-key={{ certificates_folder }}/{{ private_dns_name }}-key.pem \
       --embed-certs=true \
-      --kubeconfig={{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig ;\
+      --kubeconfig={{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig ;\
     
     kubectl config set-context default \
       --cluster={{ project_name }} \
-      --user=system:node:{{ instance_id }} \
-      --kubeconfig={{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig ;\
+      --user=system:node:{{ private_dns_name }} \
+      --kubeconfig={{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig ;\
     
     kubectl config use-context default \
-      --kubeconfig={{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig
+      --kubeconfig={{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig
   when: kubeconfig.stat.exists == False

@@ -154,12 +154,12 @@
     mode: '0644'
   become: true
   loop:
-    - '{{ instance_id }}.pem'
-    - '{{ instance_id }}-key.pem'
+    - '{{ private_dns_name }}.pem'
+    - '{{ private_dns_name }}-key.pem'
 
 - name: Copy the instance kubeconfig to the /var/lib/kubelet/ folder
   copy:
-    src: '{{ kubeconfigs_folder }}/{{ instance_id }}.kubeconfig'
+    src: '{{ kubeconfigs_folder }}/{{ private_dns_name }}.kubeconfig'
     dest: '/var/lib/kubelet/kubeconfig'
     mode: '0644'
   become: true

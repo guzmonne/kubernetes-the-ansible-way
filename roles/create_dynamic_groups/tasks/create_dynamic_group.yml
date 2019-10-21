@@ -13,7 +13,8 @@
     name: '{{ item.instance_id }}'
     group: '{{ group.name }}'
     instance_id: '{{ item.instance_id }}'
-    ansible_host: '{{ item.network_interfaces[0].private_ip_address }}'
+    private_dns_name: '{{ item.private_dns_name }}'
+    ansible_host: '{{ item.private_ip_address }}'
     ansible_ssh_private_key_file: '{{ output_folder }}/kube.pem'
     ansible_ssh_user: ubuntu
     ansible_python_interpreter: /usr/bin/python3

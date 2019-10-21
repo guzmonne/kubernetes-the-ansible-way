@@ -2,19 +2,19 @@
   delegate_to: localhost
   template:
     src: '{{ role_path }}/templates/client-csr.json'
-    dest: '{{ certificates_folder }}/{{ instance_id }}-csr.json'
+    dest: '{{ certificates_folder }}/{{ private_dns_name }}-csr.json'
     mode: '0644'
 
-- name: 'Check that the {{ instance_id }}-key.pem exists'
+- name: 'Check that the instance-key.pem exists'
   delegate_to: localhost
   stat:
-    path: '{{ certificates_folder }}/{{ instance_id }}-key.pem'
+    path: '{{ certificates_folder }}/{{ private_dns_name }}-key.pem'
   register: client_key
 
 - name: Check that the worker.pem exists
   delegate_to: localhost
   stat:
-    path: '{{ certificates_folder }}/{{ instance_id }}.pem'
+    path: '{{ certificates_folder }}/{{ private_dns_name }}.pem'
   register: client
 
 - name: Generate the client certificate and private key
@@ -24,7 +24,7 @@
       -ca={{ certificates_folder }}/ca.pem \
       -ca-key={{ certificates_folder }}/ca-key.pem \
       -config={{ certificates_folder }}/ca-config.json \
-      -hostname={{ instance_id }},{{ ansible_host }} \
+      -hostname={{ private_dns_name }},{{ ansible_host }} \
       -profile=kubernetes \
-      {{ certificates_folder }}/{{ instance_id }}-csr.json | cfssljson -bare {{ certificates_folder }}/{{ instance_id }}
+      {{ certificates_folder }}/{{ private_dns_name }}-csr.json | cfssljson -bare {{ certificates_folder }}/{{ private_dns_name }}
   when: client_key.stat.exists == False and client.stat.exists == False

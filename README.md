@@ -64,9 +64,9 @@ We need to generate:
   - `admin-key.pem`
   - `admin.pem`
 - The Kubelet Client Certificates
-  - `{{ instance_id }}-csr.json`
-  - `{{ instance_id }}-key.pem`
-  - `{{ instance_id }}.pem`
+  - `{{ private_dns_name }}-csr.json`
+  - `{{ private_dns_name }}-key.pem`
+  - `{{ private_dns_name }}.pem`
 - The Controller Manager Client Certificate
   - `kube-controller-manager-csr.json`
   - `kube-controller-manager-key.pem`
